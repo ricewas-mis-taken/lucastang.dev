@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Keystroke Monitor — Participant Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg: #000000;
+  --bg-deep: #000000;
+  --card: #0a0a0a;
+  --orange: #f97316;
+  --orange-dark: #ea5a08;
+  --ink: #ffffff;
+  --muted: #cccccc;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body { 
+  font-family: "Inter", system-ui, -apple-system, sans-serif; 
+  background: var(--bg); 
+  color: var(--ink); 
+  line-height: 1.6; 
+  min-height: 100vh; 
+  display: flex; 
+  flex-direction: column; 
+}
+
+.display { font-family: "Architects Daughter", cursive; font-weight: 700; }
+
+/* ── Header ── */
+header { position: sticky; top: 0; z-index: 50; background: var(--bg-deep); border-bottom: 1px solid #222; }
+.nav { max-width: 1000px; margin: 0 auto; padding: 1.1rem 1.5rem; display: flex; align-items: center; gap: 0.6rem; }
+.logo-mark { width: 32px; height: 32px; border-radius: 9px; background: var(--orange); }
+.logo { font-size: 1.2rem; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); text-decoration: none; }
+
+/* ── Main Container ── */
+main { flex: 1; max-width: 800px; margin: 0 auto; padding: 3.5rem 1.5rem; width: 100%; }
+
+/* ── Typography & Basics ── */
+.section-title { font-size: clamp(2rem, 5vw, 2.8rem); text-align: center; margin-bottom: 1rem; color: var(--ink); }
+.hero-body { text-align: center; color: var(--muted); margin-bottom: 3.5rem; max-width: 650px; margin-left: auto; margin-right: auto; }
+section { margin-bottom: 4rem; }
+h2.display { font-size: 1.8rem; color: var(--orange); margin-bottom: 1rem; }
+p { color: var(--muted); margin-bottom: 1rem; }
+p:last-child { margin-bottom: 0; }
+strong { color: var(--ink); font-weight: 600; }
+code { font-family: monospace; background: #1a1a1a; padding: 0.2rem 0.4rem; border-radius: 6px; border: 1px solid #333; font-size: 0.9em; color: var(--ink); }
+
+/* ── Steps ── */
+.steps { display: flex; flex-direction: column; gap: 1.5rem; margin-top: 1.5rem; }
+.step { display: grid; grid-template-columns: 32px 1fr; gap: 1rem; align-items: start; }
+.step-num { 
+  font-size: 0.9rem; 
+  font-weight: 600; 
+  color: var(--ink); 
+  background: var(--card); 
+  border: 1px solid #333; 
+  border-radius: 50%; 
+  width: 32px; 
+  height: 32px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+}
+.step-body strong { display: block; margin-bottom: 0.2rem; color: var(--orange); }
+
+/* ── Cards ── */
+.card { 
+  background: var(--card); 
+  border: 1px solid #222; 
+  border-radius: 16px; 
+  padding: 1.8rem; 
+  margin-top: 1.5rem; 
+}
+.card-title { font-weight: 700; color: var(--ink); margin-bottom: 0.8rem; display: block; }
+
+/* ── Edge Steps ── */
+.edge-step-list { display: flex; flex-direction: column; gap: 0.8rem; margin-top: 1.2rem; }
+.edge-item { display: flex; gap: 0.8rem; align-items: flex-start; }
+.edge-badge { 
+  font-size: 0.8rem; 
+  background: #222; 
+  color: var(--ink); 
+  border-radius: 4px; 
+  padding: 0.1rem 0.4rem; 
+  font-weight: 600; 
+  margin-top: 0.2rem;
+}
+
+/* ── Tray Card ── */
+.tray-card-grid { display: grid; grid-template-columns: 52px 1fr; gap: 1.5rem; align-items: start; }
+.tray-icon-preview { 
+  width: 52px; 
+  height: 52px; 
+  border-radius: 50%; 
+  background: #000; 
+  border: 2px dashed #444; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+}
+/* Updated to be a big green dot */
+.tray-icon-preview::after {
+  content: '';
+  width: 26px;
+  height: 26px;
+  background: #22c55e;
+  border-radius: 50%;
+}
+.menu-items { margin-top: 1.2rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.menu-item { 
+  display: flex; 
+  align-items: center; 
+  gap: 0.8rem; 
+  background: #000; 
+  border: 1px solid #222; 
+  border-radius: 8px; 
+  padding: 0.6rem 1rem; 
+  font-size: 0.9rem; 
+  color: var(--muted); 
+}
+/* Changed the menu dot to match the green theme if desired, left orange for menu bullets */
+.menu-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--orange); }
+
+/* ── Survey ── */
+.survey-row { 
+  display: grid; 
+  grid-template-columns: 100px 1fr 30px; 
+  gap: 1rem; 
+  align-items: center; 
+  padding: 1rem 0; 
+  border-bottom: 1px solid #222; 
+  font-size: 0.95rem; 
+}
+.survey-row:last-child { border-bottom: none; padding-bottom: 0; }
+.survey-row:first-child { padding-top: 0; }
+.survey-label { color: var(--ink); font-weight: 500; }
+.survey-bar-wrap { background: #222; border-radius: 4px; height: 6px; }
+.survey-bar { height: 100%; border-radius: 4px; background: var(--orange); }
+.survey-val { text-align: right; font-weight: 600; color: var(--orange); }
+
+/* ── Footer ── */
+footer { text-align: center; padding: 2rem 1.5rem; color: var(--muted); font-size: 0.9rem; border-top: 1px solid #222; }
+
+@media (max-width: 600px) {
+  .tray-card-grid { grid-template-columns: 1fr; }
+  .survey-row { grid-template-columns: 1fr 30px; }
+  .survey-bar-wrap { display: none; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav">
+    <div class="logo-mark"></div>
+    <a href="#" class="logo display">lucastang.dev</a>
+  </div>
+</header>
+
+<main>
+  <h1 class="section-title display">Participant Guide</h1>
+  <p class="hero-body">
+    A passive background tool that measures <em>how</em> you type — not <em>what</em> you type.
+    Every 15 seconds it computes timing patterns from your keystrokes and sends them to our research server.
+    Every 20 minutes a short mood check-in pops up. That's it.
+  </p>
+
+  <section>
+    <h2 class="display">What It Actually Does</h2>
+    <p>
+      The program runs silently in your system tray while you work normally. It measures three things
+      from your keyboard: <strong>dwell time</strong> (how long you hold each key), <strong>flight time</strong>
+      (how fast you move between keys), and <strong>burst length</strong> (how long your continuous typing runs are).
+      These patterns shift with stress, fatigue, and cognitive load — and that's what we're studying.
+    </p>
+    <p>
+      Every key is converted to a category number before anything is recorded. The logger sees
+      <strong>0</strong> (a letter key was pressed), never <em>which</em> letter. Passwords, messages,
+      and private text are structurally unrecoverable from the data, even if the files were stolen.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="display">Download &amp; Run</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <strong>Download the file</strong>
+          <p>Download <code>KeystrokeLogger.exe</code> and <code>config.json</code> from the link Lucas sent you.
+          Keep them in the <strong>same folder</strong> — the config file tells the program where to send data.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <strong>Get past your browser's warning</strong>
+          <p>Because this is a new, unsigned executable, your browser will flag it. See the section below
+          for browser-specific steps.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <strong>Run it</strong>
+          <p>Double-click <code>KeystrokeLogger.exe</code>. If Windows SmartScreen pops up saying
+          "Windows protected your PC," click <strong>More info</strong> → <strong>Run anyway</strong>.
+          This is normal for new unsigned software.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <strong>Note your Participant ID</strong>
+          <p>A small box will appear with your unique ID (something like <code>3a7f192b</code>).
+          Screenshot it or write it down and send it to Lucas — this is how your data gets linked to you.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <strong>Keep it running</strong>
+          <p>The program lives in your system tray (bottom-right corner of your taskbar). Just type normally.
+          A mood check-in will appear every 20 minutes.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="display">Why It Gets Flagged</h2>
+    <div class="card">
+      <span class="card-title">Expected behavior — not a real threat</span>
+      <p>
+        Antivirus software and browsers flag <em>any</em> new, unsigned executable that hooks into keyboard input.
+        This is a heuristic — it looks suspicious because keyloggers can be malware, even though this one is a
+        research tool with published source code.
+      </p>
+      <p>
+        The source code is fully open at <strong>github.com/ricewas-mis-taken/keystroke-research</strong>.
+        You can verify exactly what it does. If your antivirus quarantines it, you may need to add an exception.
+      </p>
+    </div>
+
+    <div class="card">
+      <span class="card-title">Microsoft Edge — Step by Step</span>
+      <div class="edge-step-list">
+        <div class="edge-item">
+          <span class="edge-badge">1</span>
+          <p>After the download starts, a bar appears at the bottom of Edge. Click the <strong>three-dot menu (…)</strong> next to the file name.</p>
+        </div>
+        <div class="edge-item">
+          <span class="edge-badge">2</span>
+          <p>Click <strong>Keep</strong>. A follow-up dialog will appear warning you about the file.</p>
+        </div>
+        <div class="edge-item">
+          <span class="edge-badge">3</span>
+          <p>Hover over <strong>Delete</strong> — this reveals a secondary option below it.</p>
+        </div>
+        <div class="edge-item">
+          <span class="edge-badge">4</span>
+          <p>Click <strong>Download anyway</strong>. The file will now save normally.</p>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin-top: 1.5rem; font-size: 0.9rem;">
+      <strong>Note:</strong> On Chrome, click the download arrow → Keep dangerous file. 
+      On Firefox, click Keep file in the warning dialog.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="display">The System Tray Icon</h2>
+    <p>
+      Once running, the program hides itself and lives as a small icon in your system tray —
+      the row of small icons in the bottom-right corner of your taskbar, near the clock.
+      You may need to click the <strong>↑ arrow</strong> to expand hidden icons if you don't see it immediately.
+    </p>
+
+    <div class="card tray-card-grid">
+      <div class="tray-icon-preview"></div>
+      <div>
+        <span class="card-title">KeystrokeLogger — Running</span>
+        <p style="font-size: 0.9rem;">Right-click the icon at any time to access these options:</p>
+        <div class="menu-items">
+          <div class="menu-item"><div class="menu-dot"></div> Show Survey Now</div>
+          <div class="menu-item"><div class="menu-dot"></div> Quit Logger</div>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin-top: 1.5rem;">
+      The program does <strong>not</strong> show in your taskbar or Alt+Tab list — it's fully background.
+      If you want to stop it, right-click the tray icon and choose <strong>Quit Logger</strong>.
+      You can also press <strong>ESC</strong> at any time to exit immediately.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="display">The Mood Check-In</h2>
+    <p>
+      Every 20 minutes a small window will appear on top of whatever you're doing. It takes about 10 seconds.
+      You'll rate three things on a 1–7 scale and pick what you're mainly doing.
+    </p>
+
+    <div class="card">
+      <div class="survey-row">
+        <div class="survey-label">Stress</div>
+        <div class="survey-bar-wrap"><div class="survey-bar" style="width:57%"></div></div>
+        <div class="survey-val">4</div>
+      </div>
+      <div class="survey-row">
+        <div class="survey-label">Focus</div>
+        <div class="survey-bar-wrap"><div class="survey-bar" style="width:71%"></div></div>
+        <div class="survey-val">5</div>
+      </div>
+      <div class="survey-row">
+        <div class="survey-label">Energy</div>
+        <div class="survey-bar-wrap"><div class="survey-bar" style="width:43%"></div></div>
+        <div class="survey-val">3</div>
+      </div>
+      <div class="survey-row">
+        <div class="survey-label">Activity</div>
+        <div style="font-family: monospace; color: var(--orange); font-size: 0.9rem;">Writing</div>
+        <div></div>
+      </div>
+    </div>
+
+    <p style="margin-top: 1.5rem; font-size: 0.9rem;">
+      If you close the window without submitting, that check-in is skipped — no worries.
+      You can also trigger one manually from the tray icon at any time.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="display">Questions</h2>
+    <p>
+      Reach out to Lucas by his email: help.type_sense@lucastang.dev
+    </p>
+  </section>
+
+</main>
+
+<footer>© 2026 lucastang.dev</footer>
+</body>
+</html>
