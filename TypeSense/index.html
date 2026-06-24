@@ -36,7 +36,9 @@ body {
 /* ── Header ── */
 header { position: sticky; top: 0; z-index: 50; background: var(--bg-deep); border-bottom: 1px solid #222; }
 .nav { max-width: 1000px; margin: 0 auto; padding: 1.1rem 1.5rem; display: flex; align-items: center; gap: 0.6rem; }
-.logo-mark { width: 32px; height: 32px; border-radius: 9px; background: var(--orange); }
+
+/* UPDATED AVATAR CSS */
+.logo-mark { width: 32px; height: 32px; border-radius: 9px; object-fit: cover; }
 .logo { font-size: 1.2rem; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); text-decoration: none; }
 
 /* ── Main Container ── */
@@ -105,7 +107,6 @@ code { font-family: monospace; background: #1a1a1a; padding: 0.2rem 0.4rem; bord
   align-items: center; 
   justify-content: center;
 }
-/* Updated to be a big green dot */
 .tray-icon-preview::after {
   content: '';
   width: 26px;
@@ -125,7 +126,6 @@ code { font-family: monospace; background: #1a1a1a; padding: 0.2rem 0.4rem; bord
   font-size: 0.9rem; 
   color: var(--muted); 
 }
-/* Changed the menu dot to match the green theme if desired, left orange for menu bullets */
 .menu-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--orange); }
 
 /* ── Survey ── */
@@ -160,7 +160,8 @@ footer { text-align: center; padding: 2rem 1.5rem; color: var(--muted); font-siz
 <header>
   <div class="nav">
     <a href="/" style="text-decoration:none; display:flex; align-items:center; gap:0.6rem;">
-      <div class="logo-mark"></div>
+      <!-- UPDATED HEADER IMAGE -->
+      <img src="apple-touch-icon.png" alt="Avatar Logo" class="logo-mark" />
       <div class="logo display">lucastang.dev</div>
     </a>
   </div>
