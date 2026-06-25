@@ -29,6 +29,7 @@ body {
   min-height: 100vh; 
   display: flex; 
   flex-direction: column; 
+  padding-bottom: 80px; /* Added to prevent the sticky banner from hiding the footer */
 }
 
 .display { font-family: "Architects Daughter", cursive; font-weight: 700; }
@@ -146,12 +147,57 @@ code { font-family: monospace; background: #1a1a1a; padding: 0.2rem 0.4rem; bord
 .survey-val { text-align: right; font-weight: 600; color: var(--orange); }
 
 /* ── Footer ── */
-footer { text-align: center; padding: 2rem 1.5rem; color: var(--muted); font-size: 0.9rem; border-top: 1px solid #222; }
+footer { text-align: center; padding: 2rem 1.5rem; color: var(--muted); font-size: 0.9rem; border-top: 1px solid #222; margin-bottom: 2rem; }
+
+/* ── Sticky Banner ── */
+.sticky-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: #111111;
+  border-top: 4px solid #000000;
+  padding: 1rem 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1.5rem;
+  z-index: 100;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.8);
+}
+
+.sticky-banner-text {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.sticky-banner-btn {
+  background: var(--ink);
+  color: var(--bg);
+  text-decoration: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: opacity 0.2s ease;
+  border: 2px solid var(--ink);
+}
+
+.sticky-banner-btn:hover {
+  opacity: 0.85;
+}
 
 @media (max-width: 600px) {
   .tray-card-grid { grid-template-columns: 1fr; }
   .survey-row { grid-template-columns: 1fr 30px; }
   .survey-bar-wrap { display: none; }
+  
+  .sticky-banner {
+    flex-direction: column;
+    gap: 0.8rem;
+    text-align: center;
+    padding: 1.2rem 1.5rem;
+  }
 }
 </style>
 </head>
@@ -160,7 +206,6 @@ footer { text-align: center; padding: 2rem 1.5rem; color: var(--muted); font-siz
 <header>
   <div class="nav">
     <a href="/" style="text-decoration:none; display:flex; align-items:center; gap:0.6rem;">
-      <!-- UPDATED HEADER IMAGE -->
       <img src="apple-touch-icon.png" alt="Avatar Logo" class="logo-mark" />
       <div class="logo display">lucastang.dev</div>
     </a>
@@ -342,15 +387,15 @@ footer { text-align: center; padding: 2rem 1.5rem; color: var(--muted); font-siz
     </p>
   </section>
 
-  <section>
-    <h2 class="display">Questions</h2>
-    <p>
-      Reach out to Lucas by his email: help.type_sense@lucastang.dev
-    </p>
-  </section>
-
 </main>
 
 <footer>© 2026 lucastang.dev</footer>
+
+<!-- STICKY BANNER -->
+<div class="sticky-banner">
+  <span class="sticky-banner-text">Interested? Contact <strong>help.type_sense@lucastang.dev</strong> to participate.</span>
+  <a href="mailto:help.type_sense@lucastang.dev" class="sticky-banner-btn">Contact Us</a>
+</div>
+
 </body>
 </html>
