@@ -14,7 +14,7 @@ const TIMING = {
   terminalEvery: 6,      // show a terminal interlude every N code lines
   terminalLineDelay: 450,// ms between typed terminal lines
   terminalHold: 1600,    // ms terminal stays up after commands finish
-  headerDelayAfterFirstTerminal: 400,
+  loopPause: 1200,       // ms pause between desktop-loop cycles
 };
 
 const CODE_LINES = [
@@ -28,7 +28,7 @@ const CODE_LINES = [
   { html: '<span class="kw">async function</span> <span class="fn">typeLine</span>(el, text) {' },
   { html: '  <span class="kw">for</span> (<span class="kw">const</span> ch <span class="kw">of</span> text) {' },
   { html: '    el.textContent += ch;' },
-  { html: '    <span class="kw">await</span> <span class="fn">sleep</span>(18);' },
+  { html: '    <span class="kw">await</span> <span class="fn">sleep</span>(<span class="num">18</span>);' },
   { html: '  }' },
   { html: '}' },
   { html: '' },
@@ -51,103 +51,127 @@ document.addEventListener("DOMContentLoaded", () => {
   const bottomOverlay = document.getElementById("bottom-monitor");
   const bootSplashes = document.querySelectorAll(".boot-splash");
   const screenContents = document.querySelectorAll(".screen-content");
+  const codeStage = document.getElementById("code-stage");
   const codeGutter = document.querySelector("#code-editor .gutter");
   const codeBody = document.querySelector("#code-editor .code-body");
   const terminalPanel = document.getElementById("terminal-panel");
   const siteHeader = document.getElementById("site-header");
-  const skipBtn = document.getElementById("skip-intro");
   const scrollHint = document.getElementById("scroll-hint");
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  // `generation` invalidates any in-flight async scene loops when the
+  // sequence is reset (e.g. bfcache restore on back-navigation) without
+  // needing every await to be manually cancelled.
+  let generation = 0;
   let booted = false;
-  let skipped = false;
-  let loopHandle = null;
+  let triggered = false;
+  let codeZoom = 1;
+
+  function resetToScene0() {
+    generation++;
+    booted = false;
+    triggered = false;
+    codeZoom = 1;
+    document.body.classList.remove("booted");
+    stage.classList.remove("zoomed");
+    stage.style.transition = "";
+    topOverlay.classList.remove("flicker");
+    bottomOverlay.classList.remove("flicker");
+    bootSplashes.forEach((el) => el.classList.remove("visible"));
+    screenContents.forEach((el) => el.classList.remove("visible"));
+    siteHeader.classList.remove("visible");
+    terminalPanel.classList.remove("visible");
+    terminalPanel.innerHTML = "";
+    codeGutter.innerHTML = "";
+    codeBody.innerHTML = "";
+    codeStage.style.transform = "scale(1)";
+    codeBody.parentElement.style.opacity = "1";
+  }
 
   function goDirectlyToFinalState() {
+    const myGen = generation;
     document.body.classList.add("booted");
+    booted = true;
+    triggered = true;
     stage.classList.add("zoomed");
     stage.style.transition = "none";
     topOverlay.classList.remove("flicker");
     bottomOverlay.classList.remove("flicker");
     screenContents.forEach((el) => el.classList.add("visible"));
     siteHeader.classList.add("visible");
-    skipBtn.classList.remove("visible");
-    scrollHint.style.display = "none";
-    startDesktopLoop();
+    startDesktopLoop(myGen);
   }
 
   function triggerBoot() {
     if (booted) return;
     booted = true;
     document.body.classList.add("booted");
-    skipBtn.classList.add("visible");
-    runSequence();
+    runSequence(generation);
   }
 
-  async function runSequence() {
+  async function runSequence(myGen) {
     // Scene 1 — boot flicker + splash
     topOverlay.classList.add("flicker");
     bottomOverlay.classList.add("flicker");
     await sleep(TIMING.flicker);
-    if (skipped) return;
+    if (myGen !== generation) return;
 
     bootSplashes.forEach((el) => el.classList.add("visible"));
     await sleep(TIMING.bootSplash);
-    if (skipped) return;
+    if (myGen !== generation) return;
     bootSplashes.forEach((el) => el.classList.remove("visible"));
 
     // Scene 2 — camera zoom
     stage.classList.add("zoomed");
     await sleep(TIMING.zoom);
-    if (skipped) return;
+    if (myGen !== generation) return;
+
+    // Scene 5 — header reveals as soon as the zoom lands, independent of
+    // the desktop loop below, which keeps running ambiently behind it.
+    siteHeader.classList.add("visible");
 
     // Scene 3 — crossfade to rendered desktop
     screenContents.forEach((el) => el.classList.add("visible"));
     await sleep(TIMING.crossfade);
-    if (skipped) return;
+    if (myGen !== generation) return;
 
-    startDesktopLoop();
+    startDesktopLoop(myGen);
   }
 
-  function skipIntro() {
-    skipped = true;
-    if (loopHandle) clearTimeout(loopHandle);
-    goDirectlyToFinalState();
-  }
-
-  async function typeCodeLines() {
+  async function typeCodeLines(myGen) {
     codeGutter.textContent = "";
     codeBody.innerHTML = "";
     for (let i = 0; i < CODE_LINES.length; i++) {
-      if (skipped) return;
+      if (myGen !== generation) return;
       const lineEl = document.createElement("div");
       codeBody.appendChild(lineEl);
       const gutterLine = document.createElement("div");
       gutterLine.textContent = i + 1;
       codeGutter.appendChild(gutterLine);
 
-      await typeHtmlLine(lineEl, CODE_LINES[i].html);
+      await typeHtmlLine(lineEl, CODE_LINES[i].html, myGen);
+      if (myGen !== generation) return;
       await sleep(TIMING.lineDelay);
-      if (skipped) return;
+      if (myGen !== generation) return;
 
       if ((i + 1) % TIMING.terminalEvery === 0) {
-        await runTerminalInterlude();
-        if (skipped) return;
+        await runTerminalInterlude(myGen);
+        if (myGen !== generation) return;
       }
     }
   }
 
   // Types an HTML-bearing line char-by-char without breaking tags: reveals
   // the target markup progressively by growing a slice of the source string.
-  async function typeHtmlLine(el, html) {
+  async function typeHtmlLine(el, html, myGen) {
     const plain = html.replace(/<[^>]+>/g, "");
     let shown = 0;
     for (let i = 0; i < plain.length; i++) {
       shown++;
       el.innerHTML = revealHtml(html, shown);
       await sleep(TIMING.typeSpeed);
-      if (skipped) return;
+      if (myGen !== generation) return;
     }
     el.innerHTML = html;
   }
@@ -170,14 +194,15 @@ document.addEventListener("DOMContentLoaded", () => {
     return out;
   }
 
-  async function runTerminalInterlude() {
+  async function runTerminalInterlude(myGen) {
     codeBody.parentElement.style.opacity = "0";
     terminalPanel.innerHTML = "";
     terminalPanel.classList.add("visible");
     await sleep(200);
+    if (myGen !== generation) return;
 
     for (const step of TERMINAL_COMMANDS) {
-      if (skipped) return;
+      if (myGen !== generation) return;
       const line = document.createElement("div");
       const prompt = document.createElement("span");
       prompt.className = "prompt";
@@ -190,46 +215,57 @@ document.addEventListener("DOMContentLoaded", () => {
       for (const ch of step.cmd) {
         cmdText.textContent += ch;
         await sleep(TIMING.typeSpeed);
-        if (skipped) return;
+        if (myGen !== generation) return;
       }
       await sleep(TIMING.terminalLineDelay);
+      if (myGen !== generation) return;
 
       if (step.out) {
         const outLine = document.createElement("div");
+        outLine.className = "out";
         outLine.textContent = step.out;
-        outLine.style.opacity = "0.75";
         terminalPanel.appendChild(outLine);
       }
     }
 
     await sleep(TIMING.terminalHold);
-    if (skipped) return;
+    if (myGen !== generation) return;
     terminalPanel.classList.remove("visible");
     codeBody.parentElement.style.opacity = "1";
+  }
 
-    if (!siteHeader.classList.contains("visible")) {
-      await sleep(TIMING.headerDelayAfterFirstTerminal);
-      if (!skipped) siteHeader.classList.add("visible");
+  async function startDesktopLoop(myGen) {
+    while (myGen === generation) {
+      await typeCodeLines(myGen);
+      if (myGen !== generation) return;
+      await sleep(TIMING.loopPause);
     }
   }
 
-  async function startDesktopLoop() {
-    // eslint-disable-next-line no-constant-condition
-    while (!skipped) {
-      await typeCodeLines();
-      if (skipped) return;
-      await sleep(1200);
-    }
-  }
+  // ---------- Post-boot: scroll wheel zooms the code screen ----------
+  codeStage.addEventListener(
+    "wheel",
+    (e) => {
+      if (!booted) return;
+      codeZoom = Math.min(2, Math.max(0.75, codeZoom - e.deltaY * 0.001));
+      codeStage.style.transform = `scale(${codeZoom})`;
+    },
+    { passive: true }
+  );
 
-  skipBtn.addEventListener("click", skipIntro);
+  // ---------- bfcache: replay the whole sequence on back-navigation ----------
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) {
+      resetToScene0();
+      if (reducedMotion) goDirectlyToFinalState();
+    }
+  });
 
   if (reducedMotion) {
     goDirectlyToFinalState();
     return;
   }
 
-  let triggered = false;
   const fireOnce = (e) => {
     if (triggered) return;
     triggered = true;
