@@ -1,11 +1,10 @@
 /* ==========================================================================
    lucastang.dev — animated boot/desktop intro
-   Monitor coordinates below were measured pixel-by-pixel against the actual
-   screen bounds (bezel excluded) in assets/desk-photo.png (1448x1086),
-   then expressed as % of the viewport-covering background image:
-     top monitor screen:    x[438,808]  y[353,560]
-     bottom (MSI) screen:   x[398,858]  y[592,790]
-   Re-measure the same way first if the crop/zoom ever looks off.
+   Monitor screen fractions (of assets/desk-photo.png, 1448x1086, re-measured
+   via edge detection against the bezels) live in boot.js as SCREENS — the
+   overlay divs are positioned in JS against the photo's actual object-fit:
+   cover render rect, not fixed CSS %, so alignment holds at any viewport
+   aspect ratio. See computeCoverRect()/updateMonitorPositions() in boot.js.
    ========================================================================== */
 
 :root {
@@ -15,23 +14,11 @@
   --orange: #f97316;
   --accent: #7f5af0;
 
-  /* --- Top monitor (smaller, sits above the MSI monitor) --- */
-  --top-mon-left: 30.25%;
-  --top-mon-right: 55.80%;
-  --top-mon-top: 32.50%;
-  --top-mon-bottom: 51.57%;
-
-  /* --- Bottom monitor (MSI, wider) --- */
-  --bot-mon-left: 27.49%;
-  --bot-mon-right: 59.25%;
-  --bot-mon-top: 54.51%;
-  --bot-mon-bottom: 72.74%;
-
   /* Center of the whole monitor cluster, used as the zoom transform-origin */
-  --cluster-cx: 44.75%;
-  --cluster-cy: 52.63%;
+  --cluster-cx: 43.38%;
+  --cluster-cy: 53.27%;
 
-  /* How far in Scene 2 pushes the camera */
+  /* How far in Scene 2 pushes the camera (also the tight-zoom scroll limit) */
   --zoom-scale: 2.6;
 }
 
@@ -67,29 +54,20 @@ body {
   inset: 0;
   width: 100%;
   height: 100%;
-  background: url("assets/desk-photo.png") center center / cover no-repeat;
+  object-fit: cover;
+  display: block;
+  filter: blur(0px);
 }
 
-/* Monitor overlay divs, positioned as % of #stage */
+/* Monitor overlay divs — left/top/width/height are set in boot.js against
+   the photo's computed object-fit:cover render rect, kept in the same
+   untransformed layout space as #stage so the shared #stage scale carries
+   both the photo and these overlays together at any zoom level. */
 .monitor-overlay {
   position: absolute;
   overflow: hidden;
   background: #000;
   transition: opacity .25s ease;
-}
-
-#top-monitor {
-  left: var(--top-mon-left);
-  right: calc(100% - var(--top-mon-right));
-  top: var(--top-mon-top);
-  bottom: calc(100% - var(--top-mon-bottom));
-}
-
-#bottom-monitor {
-  left: var(--bot-mon-left);
-  right: calc(100% - var(--bot-mon-right));
-  top: var(--bot-mon-top);
-  bottom: calc(100% - var(--bot-mon-bottom));
 }
 
 /* ---------- Scene 1: boot flicker ---------- */
@@ -219,7 +197,10 @@ body {
   flex-direction: column;
 }
 
-.browser-chrome {
+/* ---------- Fake GitHub mockup (top-left panel) ----------
+   Entirely static/invented: no real repo data, no outbound links. */
+
+.gh-topbar {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -230,11 +211,11 @@ body {
   flex: 0 0 auto;
 }
 
-.browser-chrome .dot {
+.gh-topbar .dot {
   width: 5px; height: 5px; border-radius: 50%; background: #495264;
 }
 
-.browser-chrome .url {
+.gh-topbar .url {
   flex: 1;
   background: #0d1117;
   border-radius: 6px;
@@ -243,33 +224,187 @@ body {
   color: #c9d1d9;
 }
 
-.preview-frame-wrap {
+.gh-body {
   flex: 1;
-  position: relative;
-  overflow: hidden;
-  background: #fff;
+  display: flex;
+  min-height: 0;
+  font-size: clamp(5px, .75vw, 8.5px);
 }
 
-.preview-frame {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 400%;
-  height: 400%;
-  border: 0;
-  transform: scale(0.25);
-  transform-origin: top left;
-  pointer-events: none;
+.gh-sidebar {
+  flex: 0 0 34%;
+  border-right: 1px solid #1f2733;
+  padding: 5px 6px;
+  overflow: hidden;
 }
+
+.gh-repo-name {
+  color: #c9d1d9;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.gh-files {
+  list-style: none;
+  color: #8b949e;
+  line-height: 1.8;
+}
+
+.gh-main {
+  flex: 1;
+  padding: 5px 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.gh-stats {
+  display: flex;
+  gap: 8px;
+  color: #8b949e;
+  flex: 0 0 auto;
+  margin-bottom: 4px;
+}
+
+.gh-graph {
+  display: grid;
+  grid-template-columns: repeat(20, 1fr);
+  gap: 1.5px;
+  flex: 0 0 auto;
+  margin-bottom: 5px;
+}
+
+.gh-graph .gh-cell {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 1px;
+  background: #161b22;
+}
+
+.gh-graph .gh-cell[data-level="1"] { background: #0e4429; }
+.gh-graph .gh-cell[data-level="2"] { background: #006d32; }
+.gh-graph .gh-cell[data-level="3"] { background: #26a641; }
+.gh-graph .gh-cell[data-level="4"] { background: #39d353; }
+
+.gh-commits {
+  list-style: none;
+  color: #8b949e;
+  line-height: 1.7;
+  overflow: hidden;
+}
+
+.gh-commits .gh-hash {
+  color: #6ca6f7;
+  margin-right: 4px;
+}
+
+.gh-commits em {
+  float: right;
+  font-style: normal;
+  color: #565d68;
+}
+
+/* ---------- Custom Spotify-style widget (top-right panel) ----------
+   Own player UI over real static playlist data (see boot.js TRACKS), not
+   Spotify's iframe/chrome. */
 
 #spotify-pane {
-  background: #000;
+  background: #121212;
 }
 
-#spotify-pane iframe {
+.sp-widget {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(3px, 1vw, 8px);
+  padding: clamp(4px, 2vw, 10px);
+  font-size: clamp(5px, .85vw, 9px);
+}
+
+.sp-art {
+  width: clamp(24px, 34%, 64px);
+  aspect-ratio: 1;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #282828;
+  flex: 0 0 auto;
+}
+
+.sp-art img {
   width: 100%;
   height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.sp-info {
+  width: 100%;
+  text-align: center;
+  color: #fff;
+}
+
+.sp-title {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sp-artist {
+  color: #b3b3b3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sp-progress {
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: #4d4d4d;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.sp-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: #1db954;
+}
+
+.sp-controls {
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 3vw, 18px);
+}
+
+.sp-btn {
+  background: none;
   border: 0;
+  padding: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sp-icon {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+}
+
+.sp-icon-prev {
+  border-right: 6px solid #fff;
+}
+
+.sp-icon-next {
+  border-left: 6px solid #fff;
 }
 
 /* ---------- Header (Scene 5) ---------- */

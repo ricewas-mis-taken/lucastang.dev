@@ -16,26 +16,44 @@
 <body>
 
 <div id="stage">
-  <div id="desk-photo"></div>
+  <img id="desk-photo" src="/assets/desk-photo.png" alt=""/>
 
   <div id="top-monitor" class="monitor-overlay">
     <div class="boot-splash"><div class="boot-spinner"></div></div>
     <div id="top-monitor-inner" class="screen-content">
       <div id="preview-pane">
-        <div class="browser-chrome">
+        <div class="gh-topbar">
           <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-          <span class="url">lucastang.dev</span>
+          <span class="url">github.com/lucastang/lucastang.dev</span>
         </div>
-        <div class="preview-frame-wrap">
-          <iframe class="preview-frame" src="/projects/" tabindex="-1" loading="lazy"></iframe>
+        <div class="gh-body">
+          <aside class="gh-sidebar">
+            <div class="gh-repo-name">lucastang.dev</div>
+            <ul class="gh-files" id="gh-files"></ul>
+          </aside>
+          <main class="gh-main">
+            <div class="gh-stats">
+              <span class="gh-stat">128 stars</span>
+              <span class="gh-stat">24 forks</span>
+            </div>
+            <div class="gh-graph" id="gh-graph"></div>
+            <ul class="gh-commits" id="gh-commits"></ul>
+          </main>
         </div>
       </div>
       <div id="spotify-pane">
-        <iframe
-          src="https://open.spotify.com/embed/playlist/33zDbT2VaLbq6yCFW05piK?utm_source=generator&theme=0"
-          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-          loading="lazy">
-        </iframe>
+        <div class="sp-widget">
+          <div class="sp-art"><img id="sp-art-img" src="" alt=""/></div>
+          <div class="sp-info">
+            <div class="sp-title" id="sp-title">&nbsp;</div>
+            <div class="sp-artist" id="sp-artist">&nbsp;</div>
+            <div class="sp-progress"><div class="sp-progress-fill" id="sp-progress-fill"></div></div>
+          </div>
+          <div class="sp-controls">
+            <button class="sp-btn sp-prev" id="sp-prev" aria-label="Previous track"><span class="sp-icon sp-icon-prev"></span></button>
+            <button class="sp-btn sp-next" id="sp-next" aria-label="Next track"><span class="sp-icon sp-icon-next"></span></button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
