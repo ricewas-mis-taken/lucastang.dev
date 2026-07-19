@@ -1,108 +1,71 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>lucastang.dev</title>
-<meta content="Project overview by Lucas Tang." name="description"/>
+<meta content="Lucas Tang — developer." name="description"/>
 <meta content="lucastang.dev" property="og:title"/>
-<meta content="Project overview by Lucas Tang." property="og:description"/>
-<link href="favicon.ico" rel="icon"/>
+<meta content="Lucas Tang — developer." property="og:description"/>
+<link href="/favicon.ico" rel="icon"/>
 <link href="https://fonts.googleapis.com" rel="preconnect"/>
-<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
 <link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
-<style>
-:root {
-  --bg: #000000;
-  --bg-deep: #000000;
-  --card: #0a0a0a;
-  --orange: #f97316;
-  --orange-dark: #ea5a08;
-  --ink: #ffffff;
-  --muted: #cccccc;
-}
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: "Inter", system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--ink); line-height: 1.6; min-height: 100vh; display: flex; flex-direction: column; }
-.display { font-family: "Architects Daughter", cursive; font-weight: 700; }
-header { position: sticky; top: 0; z-index: 50; background: var(--bg-deep); border-bottom: 1px solid #222; }
-.nav { max-width: 1000px; margin: 0 auto; padding: 1.1rem 1.5rem; display: flex; align-items: center; gap: 0.6rem; }
-
-/* UPDATED AVATAR CSS */
-.logo-mark { width: 32px; height: 32px; border-radius: 9px; object-fit: cover; }
-.logo { font-size: 1.2rem; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); }
-
-main { flex: 1; max-width: 1000px; margin: 0 auto; padding: 3.5rem 1.5rem; width: 100%; }
-.section-title { font-size: clamp(2rem, 5vw, 2.8rem); text-align: center; margin-bottom: 2.5rem; color: #ffffff; }
-.projects { display: flex; flex-direction: column; gap: 1rem; max-width: 720px; margin: 0 auto 4.5rem; }
-.project-bar { background: #0a0a0a; border: 1px solid #222; border-radius: 12px; padding: 1.1rem 1.4rem; cursor: pointer; text-align: left; color: #ffffff; transition: background 0.18s ease, transform 0.12s ease; font-family: inherit; width: 100%; }
-.project-bar:hover { background: #151515; transform: translateY(-2px); }
-.project-bar:focus-visible { outline: 3px solid #ffffff; outline-offset: 3px; }
-.project-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-.project-head h3 { font-size: 1.15rem; font-weight: 700; color: #ffffff; }
-.toggle { font-size: 1.3rem; font-weight: 700; transition: transform 0.2s ease; line-height: 1; color: #ffffff; }
-.project-bar[aria-expanded="true"] .toggle { transform: rotate(45deg); }
-.blurb { max-height: 0; overflow: hidden; transition: max-height 0.28s ease, margin-top 0.28s ease; color: #ffffff; font-size: 0.98rem; }
-.project-bar[aria-expanded="true"] .blurb { max-height: 600px; margin-top: 0.75rem; }
-.see-more { display: inline-block; margin-top: 0.9rem; padding: 0.5rem 0.9rem; background: #000; color: #fff; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.9rem; transition: background 0.15s ease; }
-.see-more:hover { background: #222; }
-.about { background: var(--card); border: 1px solid #222; border-radius: 20px; padding: 2.5rem; display: grid; grid-template-columns: 200px 1fr; gap: 2.5rem; align-items: center; max-width: 820px; margin: 0 auto; }
-.photo { aspect-ratio: 1; border-radius: 16px; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--orange); border: 2px dashed #444; text-align: center; gap: 0.5rem; }
-.photo svg { width: 42px; height: 42px; opacity: 0.8; }
-.photo span { font-size: 0.8rem; color: var(--muted); }
-.about h2 { font-size: 1.6rem; margin-bottom: 0.4rem; color: var(--orange); }
-.about .role { color: var(--ink); font-weight: 600; margin-bottom: 1rem; }
-.about p { color: var(--muted); margin-bottom: 1rem; }
-footer { text-align: center; padding: 2rem 1.5rem; color: var(--muted); font-size: 0.9rem; border-top: 1px solid #222; }
-@media (max-width: 640px) { .about { grid-template-columns: 1fr; text-align: center; } .photo { max-width: 200px; margin: 0 auto; } }
-</style>
-</link></head>
+<link href="/style.css" rel="stylesheet"/>
+</head>
 <body>
-<header>
-<div class="nav">
-<a href="/" style="text-decoration:none; display:flex; align-items:center; gap:0.6rem;">
-<!-- UPDATED HEADER IMAGE -->
-<img src="apple-touch-icon.png" alt="Avatar Logo" class="logo-mark" />
-<div class="logo display">lucastang.dev</div>
-</a>
-</div>
-</header>
-<main>
-<h1 class="section-title display">Project overview</h1>
-<div class="projects">
-<button aria-expanded="false" class="project-bar" onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true')">
-<div class="project-head"><h3>TypeSense</h3><span class="toggle">+</span></div>
-<div class="blurb">
-<p>A passive research tool that monitors how you type — not what you type — to predict mental health states like stress, focus, and energy. Every key is anonymized to a category number, so no content is ever recoverable. Every 15 seconds it computes timing features from your keystrokes; every 20 minutes it asks how you're feeling. The goal is to train a model that can predict your mental state from typing patterns alone.</p>
-<a class="see-more" href="/TypeSense" onclick="event.stopPropagation()">See more</a>
-</div>
-</button>
-<button aria-expanded="false" class="project-bar" onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true')">
-<div class="project-head"><h3>gexel</h3><span class="toggle">+</span></div>
-<div class="blurb">
-<p>A collection of small arcade-style browser games built for a game jam, including a Pac-Man-inspired maze chase. Playable directly in the browser with fullscreen support.</p>
-<a class="see-more" href="/gexel" onclick="event.stopPropagation()">See more</a>
-</div>
-</button>
-<button aria-expanded="false" class="project-bar" onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='true'?'false':'true')">
-<div class="project-head"><h3>Under construction</h3><span class="toggle">+</span></div>
-<div class="blurb"><p>Unavailable</p></div>
-</button>
-</div>
-<section class="about">
-<div class="photo" style="border: none; background: transparent;">
-<img alt="Profile" src="about-profile.jpg" style="width: 100%; height: 100%; border-radius: 16px; object-fit: cover; object-position: center;"/>
-</div>
-<div>
-<h2 class="display">About Me</h2>
-<p class="role">Hi! I'm Lucas, a high school developer living in San Diego, CA. I'm fluent in C++, HTML, Python, and Java, and I've been coding for many years. Here, you can find some of my best work!</p>
 
-<div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-top:1rem; justify-content:center;">
-<div style="background:#111;border:1px solid #222;border-radius:10px;padding:0.6rem 0.9rem;font-size:0.9rem;">🐙 GitHub: <strong>ricewas-mis-taken</strong></div>
-<div style="background:#111;border:1px solid #222;border-radius:10px;padding:0.6rem 0.9rem;font-size:0.9rem;">💬 Discord: <strong>pengu32</strong></div>
-</div></div>
-</section>
-</main>
-<footer>© 2026 lucastang.dev</footer>
+<div id="stage">
+  <div id="desk-photo"></div>
+
+  <div id="top-monitor" class="monitor-overlay">
+    <div class="boot-splash"><div class="boot-spinner"></div></div>
+    <div id="top-monitor-inner" class="screen-content">
+      <div id="preview-pane">
+        <div class="browser-chrome">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="url">lucastang.dev</span>
+        </div>
+        <div class="preview-body">lucastang.dev preview</div>
+      </div>
+      <div id="spotify-pane">
+        <iframe
+          style="border-radius:12px"
+          src="https://open.spotify.com/embed/playlist/33zDbT2VaLbq6yCFW05piK?utm_source=generator&theme=0"
+          width="100%" height="100%" frameborder="0"
+          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+          loading="lazy">
+        </iframe>
+      </div>
+    </div>
+  </div>
+
+  <div id="bottom-monitor" class="monitor-overlay">
+    <div class="boot-splash"><div class="boot-spinner"></div></div>
+    <div id="code-editor" class="screen-content">
+      <div class="gutter"></div>
+      <div class="code-body"></div>
+    </div>
+    <div id="terminal-panel"></div>
+  </div>
+</div>
+
+<div id="scroll-hint">Scroll to continue</div>
+<button id="skip-intro" type="button">Skip →</button>
+
+<header id="site-header">
+  <div class="nav">
+    <a href="/" class="brand">
+      <img src="/apple-touch-icon.png" alt="Avatar Logo" class="logo-mark"/>
+      <span class="logo">lucastang.dev</span>
+    </a>
+    <nav class="links">
+      <a href="/projects/">Projects</a>
+      <a href="/aboutme/">About Me</a>
+    </nav>
+  </div>
+</header>
+
+<script src="/boot.js"></script>
 </body>
 </html>
