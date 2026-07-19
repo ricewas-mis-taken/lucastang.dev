@@ -50,7 +50,12 @@ const SCREENS = {
   bottom: { x: 0.2818, y: 0.5341, w: 0.3039, h: 0.1979 },
 };
 
-const MAX_DESK_BLUR = 10; // px, applied at full scroll-out (scale = ZOOM_MIN)
+const MAX_DESK_BLUR = 6; // px, applied at full scroll-in (scale = ZOOM_MAX)
+
+// Extra px the monitor overlay boxes are padded outward by, so the opaque
+// overlay swallows any blurred/misaligned bezel edge instead of leaving a
+// blurred sliver of the photo visible around the screen.
+const BEZEL_PAD = 2;
 
 // Static snapshot of the real playlist (id 33zDbT2VaLbq6yCFW05piK) — track
 // name/artist/album-art/preview clip pulled directly from Spotify's public
@@ -67,8 +72,6 @@ const TRACKS = [
   { title: "The Nights", artist: "Avicii", art: "https://i.scdn.co/image/ab67616d0000b2730ae4f4d42e4a09f3a29f64ad", preview: "https://p.scdn.co/mp3-preview/7866e9567e7398035a01f663104ea1c5c28d11b1" },
   { title: "Centuries", artist: "Fall Out Boy", art: "https://i.scdn.co/image/ab67616d0000b2733cf1c1dbcfa3f1ab7282719b", preview: "https://p.scdn.co/mp3-preview/d6fcac6047be8c069b563701022ce2713d7c05cf" },
 ];
-
-const GH_FILES = ["assets/", "index.html", "style.css", "boot.js", "README.md"];
 
 const GH_COMMITS = [
   { hash: "a1b2c3d", msg: "Fix monitor alignment", age: "2h" },
@@ -116,7 +119,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const ZOOM_MIN = 1;
-  const ZOOM_MAX = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--zoom-scale")) || 2.6;
+  const ZOOM_MAX_DEFAULT = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--zoom-scale")) || 2.6;
+  // Mutable: narrowed by refreshZoomBounds() once real layout/photo geometry
+  // is known, so scrolling in never crops a monitor out of frame.
+  let ZOOM_MAX = ZOOM_MAX_DEFAULT;
 
   // `generation` invalidates any in-flight async scene loops when the
   // sequence is reset (e.g. bfcache restore on back-navigation) without
@@ -138,13 +144,55 @@ document.addEventListener("DOMContentLoaded", () => {
       deskPhoto.naturalHeight
     );
     const place = (el, frac) => {
-      el.style.left = `${renderX + frac.x * renderW}px`;
-      el.style.top = `${renderY + frac.y * renderH}px`;
-      el.style.width = `${frac.w * renderW}px`;
-      el.style.height = `${frac.h * renderH}px`;
+      el.style.left = `${renderX + frac.x * renderW - BEZEL_PAD}px`;
+      el.style.top = `${renderY + frac.y * renderH - BEZEL_PAD}px`;
+      el.style.width = `${frac.w * renderW + BEZEL_PAD * 2}px`;
+      el.style.height = `${frac.h * renderH + BEZEL_PAD * 2}px`;
     };
     place(topOverlay, SCREENS.top);
     place(bottomOverlay, SCREENS.bottom);
+    refreshZoomBounds();
+  }
+
+  // Computes how far scroll-in can zoom before either monitor's overlay box
+  // would be pushed outside the viewport by the #stage scale (transform
+  // origin = cluster center), so scrolling in always leaves both monitors
+  // fully in frame instead of cropping one off at the tight end.
+  function computeMaxZoomInFrame() {
+    const stageW = stage.offsetWidth;
+    const stageH = stage.offsetHeight;
+    if (!stageW || !stageH) return ZOOM_MAX_DEFAULT;
+
+    const rootStyle = getComputedStyle(document.documentElement);
+    const originX = (parseFloat(rootStyle.getPropertyValue("--cluster-cx")) / 100) * stageW;
+    const originY = (parseFloat(rootStyle.getPropertyValue("--cluster-cy")) / 100) * stageH;
+
+    let maxScale = Infinity;
+    const consider = (p, o, bound) => {
+      if (p === o) return;
+      const s = p > o ? (bound - o) / (p - o) : (0 - o) / (p - o);
+      if (s < maxScale) maxScale = s;
+    };
+
+    [topOverlay, bottomOverlay].forEach((el) => {
+      const left = parseFloat(el.style.left) || 0;
+      const top = parseFloat(el.style.top) || 0;
+      const width = parseFloat(el.style.width) || 0;
+      const height = parseFloat(el.style.height) || 0;
+      [left, left + width].forEach((x) => consider(x, originX, stageW));
+      [top, top + height].forEach((y) => consider(y, originY, stageH));
+    });
+
+    return Math.min(ZOOM_MAX_DEFAULT, maxScale);
+  }
+
+  function refreshZoomBounds() {
+    const computed = computeMaxZoomInFrame();
+    if (computed && isFinite(computed) && computed > ZOOM_MIN) {
+      ZOOM_MAX = computed;
+      document.documentElement.style.setProperty("--zoom-scale", ZOOM_MAX.toFixed(4));
+      if (sceneZoom > ZOOM_MAX) sceneZoom = ZOOM_MAX;
+    }
   }
 
   if (deskPhoto.complete && deskPhoto.naturalWidth) {
@@ -158,8 +206,11 @@ document.addEventListener("DOMContentLoaded", () => {
   function applySceneZoom(zoom) {
     sceneZoom = zoom;
     stage.style.transform = `scale(${zoom})`;
+    // Wide shot (scrolled all the way out, zoom = ZOOM_MIN) is fully sharp;
+    // blur eases in gradually as you scroll/zoom in toward the monitors,
+    // like a shallow depth of field settling on the screens.
     const t = (zoom - ZOOM_MIN) / (ZOOM_MAX - ZOOM_MIN);
-    deskPhoto.style.filter = `blur(${MAX_DESK_BLUR * (1 - t)}px)`;
+    deskPhoto.style.filter = `blur(${MAX_DESK_BLUR * t}px)`;
   }
 
   function resetToScene0() {
@@ -349,16 +400,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ---------- Fake GitHub mockup (top-left panel) ----------
   // Fully invented: no real repo data, no network calls, no outbound links.
   function renderGhMock() {
-    const filesEl = document.getElementById("gh-files");
     const commitsEl = document.getElementById("gh-commits");
     const graphEl = document.getElementById("gh-graph");
-    if (!filesEl || filesEl.childElementCount) return; // render once
-
-    GH_FILES.forEach((name) => {
-      const li = document.createElement("li");
-      li.textContent = name;
-      filesEl.appendChild(li);
-    });
+    if (!graphEl || graphEl.childElementCount) return; // render once
 
     GH_COMMITS.forEach((c) => {
       const li = document.createElement("li");
@@ -396,10 +440,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const fillEl = document.getElementById("sp-progress-fill");
     const prevBtn = document.getElementById("sp-prev");
     const nextBtn = document.getElementById("sp-next");
+    const playBtn = document.getElementById("sp-play");
+    const playIcon = document.getElementById("sp-play-icon");
     const audio = new Audio();
     audio.preload = "auto";
 
     let index = 0;
+
+    function setPlayIcon(playing) {
+      playIcon.classList.toggle("is-playing", playing);
+      playIcon.classList.toggle("is-paused", !playing);
+      playBtn.setAttribute("aria-label", playing ? "Pause" : "Play");
+    }
 
     function loadTrack(i, autoplay) {
       index = (i + TRACKS.length) % TRACKS.length;
@@ -415,7 +467,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // handler that triggered boot) but may still be rejected in some
         // browsers — fail silently and leave the widget paused rather than
         // throwing.
-        audio.play().catch(() => {});
+        audio.play().catch(() => setPlayIcon(false));
       }
     }
 
@@ -424,9 +476,18 @@ document.addEventListener("DOMContentLoaded", () => {
       fillEl.style.width = `${(audio.currentTime / audio.duration) * 100}%`;
     });
     audio.addEventListener("ended", () => loadTrack(index + 1, true));
+    audio.addEventListener("play", () => setPlayIcon(true));
+    audio.addEventListener("pause", () => setPlayIcon(false));
 
     prevBtn.addEventListener("click", () => loadTrack(index - 1, true));
     nextBtn.addEventListener("click", () => loadTrack(index + 1, true));
+    playBtn.addEventListener("click", () => {
+      if (audio.paused) {
+        audio.play().catch(() => {});
+      } else {
+        audio.pause();
+      }
+    });
 
     loadTrack(0, true);
   }

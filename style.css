@@ -133,7 +133,7 @@ body {
   display: flex;
   height: 100%;
   background: #282a36;
-  font-size: clamp(6px, 1vw, 12px);
+  font-size: clamp(5px, 0.75vw, 9px);
   line-height: 1.6;
 }
 
@@ -166,7 +166,7 @@ body {
   background: #282a36;
   color: #f8f8f2;
   padding: 6px 10px;
-  font-size: clamp(6px, 1vw, 12px);
+  font-size: clamp(5px, 0.75vw, 9px);
   line-height: 1.7;
   opacity: 0;
   transition: opacity .35s ease;
@@ -229,25 +229,6 @@ body {
   display: flex;
   min-height: 0;
   font-size: clamp(5px, .75vw, 8.5px);
-}
-
-.gh-sidebar {
-  flex: 0 0 34%;
-  border-right: 1px solid #1f2733;
-  padding: 5px 6px;
-  overflow: hidden;
-}
-
-.gh-repo-name {
-  color: #c9d1d9;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.gh-files {
-  list-style: none;
-  color: #8b949e;
-  line-height: 1.8;
 }
 
 .gh-main {
@@ -405,6 +386,34 @@ body {
 
 .sp-icon-next {
   border-left: 6px solid #fff;
+}
+
+.sp-icon-playpause {
+  position: relative;
+  display: inline-block;
+  width: 9px;
+  height: 10px;
+}
+
+.sp-icon-playpause.is-playing::before,
+.sp-icon-playpause.is-playing::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 3px;
+  height: 100%;
+  background: #fff;
+}
+
+.sp-icon-playpause.is-playing::before { left: 0; }
+.sp-icon-playpause.is-playing::after { left: 6px; }
+
+.sp-icon-playpause.is-paused {
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 8px solid #fff;
 }
 
 /* ---------- Header (Scene 5) ---------- */
