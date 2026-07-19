@@ -1,8 +1,11 @@
 /* ==========================================================================
    lucastang.dev — animated boot/desktop intro
-   Monitor coordinates below are eyeballed against assets/desk-photo.png
-   (1448x1086) and expressed as % of the viewport-covering background image.
-   Re-tune these first if the crop/zoom looks off once viewed live.
+   Monitor coordinates below were measured pixel-by-pixel against the actual
+   screen bounds (bezel excluded) in assets/desk-photo.png (1448x1086),
+   then expressed as % of the viewport-covering background image:
+     top monitor screen:    x[438,808]  y[353,560]
+     bottom (MSI) screen:   x[398,858]  y[592,790]
+   Re-measure the same way first if the crop/zoom ever looks off.
    ========================================================================== */
 
 :root {
@@ -13,20 +16,20 @@
   --accent: #7f5af0;
 
   /* --- Top monitor (smaller, sits above the MSI monitor) --- */
-  --top-mon-left: 30.4%;
-  --top-mon-right: 56.7%;
-  --top-mon-top: 32.8%;
-  --top-mon-bottom: 50.0%;
+  --top-mon-left: 30.25%;
+  --top-mon-right: 55.80%;
+  --top-mon-top: 32.50%;
+  --top-mon-bottom: 51.57%;
 
   /* --- Bottom monitor (MSI, wider) --- */
-  --bot-mon-left: 27.8%;
-  --bot-mon-right: 57.8%;
-  --bot-mon-top: 50.0%;
-  --bot-mon-bottom: 73.0%;
+  --bot-mon-left: 27.49%;
+  --bot-mon-right: 59.25%;
+  --bot-mon-top: 54.51%;
+  --bot-mon-bottom: 72.74%;
 
   /* Center of the whole monitor cluster, used as the zoom transform-origin */
-  --cluster-cx: 44.1%;
-  --cluster-cy: 52.8%;
+  --cluster-cx: 44.75%;
+  --cluster-cy: 52.63%;
 
   /* How far in Scene 2 pushes the camera */
   --zoom-scale: 2.6;
@@ -140,41 +143,50 @@ body {
 
 .screen-content.visible { opacity: 1; }
 
-/* Bottom monitor: code editor / terminal */
+/* Bottom monitor: code editor / terminal, wrapped in a zoomable stage */
+
+#code-stage {
+  position: absolute;
+  inset: 0;
+  transform-origin: center center;
+}
 
 #code-editor {
   display: flex;
   height: 100%;
-  background: #0d1117;
+  background: #282a36;
   font-size: clamp(6px, 1vw, 12px);
   line-height: 1.6;
 }
 
 #code-editor .gutter {
   padding: 6px 8px;
-  color: #4a5568;
+  color: #6272a4;
   text-align: right;
   user-select: none;
-  border-right: 1px solid #1f2733;
+  border-right: 1px solid #414458;
 }
 
 #code-editor .code-body {
   flex: 1;
   padding: 6px 10px;
   white-space: pre-wrap;
-  color: #c9d1d9;
+  color: #f8f8f2;
   overflow: hidden;
 }
 
-#code-editor .code-body .kw { color: #ff7b72; }
-#code-editor .code-body .str { color: #a5d6ff; }
-#code-editor .code-body .fn { color: #d2a8ff; }
-#code-editor .code-body .cm { color: #8b949e; }
+#code-editor .code-body .kw { color: #ff79c6; }
+#code-editor .code-body .str { color: #f1fa8c; }
+#code-editor .code-body .fn { color: #50fa7b; }
+#code-editor .code-body .cm { color: #6272a4; }
+#code-editor .code-body .num { color: #bd93f9; }
 
 #terminal-panel {
+  position: absolute;
+  inset: 0;
   height: 100%;
-  background: #04070d;
-  color: #7ee787;
+  background: #282a36;
+  color: #f8f8f2;
   padding: 6px 10px;
   font-size: clamp(6px, 1vw, 12px);
   line-height: 1.7;
@@ -184,7 +196,8 @@ body {
 
 #terminal-panel.visible { opacity: 1; }
 
-#terminal-panel .prompt { color: #58a6ff; }
+#terminal-panel .prompt { color: #50fa7b; }
+#terminal-panel .out { color: #6272a4; }
 
 /* Top monitor: split preview / spotify */
 
@@ -214,6 +227,7 @@ body {
   background: #1c2128;
   font-size: clamp(5px, .8vw, 9px);
   color: #8b949e;
+  flex: 0 0 auto;
 }
 
 .browser-chrome .dot {
@@ -229,14 +243,23 @@ body {
   color: #c9d1d9;
 }
 
-.preview-body {
+.preview-frame-wrap {
   flex: 1;
-  background: #000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: clamp(5px, .9vw, 10px);
-  color: var(--muted);
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+}
+
+.preview-frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 400%;
+  height: 400%;
+  border: 0;
+  transform: scale(0.25);
+  transform-origin: top left;
+  pointer-events: none;
 }
 
 #spotify-pane {
@@ -315,28 +338,6 @@ body {
 }
 
 #site-header .links a:hover { opacity: 1; color: var(--orange); }
-
-/* ---------- Skip control ---------- */
-
-#skip-intro {
-  position: fixed;
-  bottom: 1.25rem;
-  right: 1.5rem;
-  z-index: 90;
-  background: rgba(0,0,0,.55);
-  color: var(--muted);
-  border: 1px solid #333;
-  border-radius: 999px;
-  padding: 0.5rem 1rem;
-  font-size: 0.85rem;
-  cursor: pointer;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .3s ease;
-}
-
-#skip-intro.visible { opacity: 1; pointer-events: auto; }
-#skip-intro:hover { color: var(--ink); border-color: #555; }
 
 /* ---------- Scroll hint (Scene 0) ---------- */
 
