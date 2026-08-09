@@ -113,7 +113,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const codeGutter = document.querySelector("#code-editor .gutter");
   const codeBody = document.querySelector("#code-editor .code-body");
   const terminalPanel = document.getElementById("terminal-panel");
-  const siteHeader = document.getElementById("site-header");
   const scrollHint = document.getElementById("scroll-hint");
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -227,7 +226,6 @@ document.addEventListener("DOMContentLoaded", () => {
     bottomOverlay.classList.remove("flicker");
     bootSplashes.forEach((el) => el.classList.remove("visible"));
     screenContents.forEach((el) => el.classList.remove("visible"));
-    siteHeader.classList.remove("visible");
     terminalPanel.classList.remove("visible");
     terminalPanel.innerHTML = "";
     codeGutter.innerHTML = "";
@@ -246,7 +244,6 @@ document.addEventListener("DOMContentLoaded", () => {
     topOverlay.classList.remove("flicker");
     bottomOverlay.classList.remove("flicker");
     screenContents.forEach((el) => el.classList.add("visible"));
-    siteHeader.classList.add("visible");
     renderGhMock();
     initSpotifyWidget();
     startDesktopLoop(myGen);
@@ -279,10 +276,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // at the same end value, so post-boot scroll zoom can take over smoothly.
     stage.style.transition = "none";
     applySceneZoom(ZOOM_MAX);
-
-    // Scene 5 — header reveals as soon as the zoom lands, independent of
-    // the desktop loop below, which keeps running ambiently behind it.
-    siteHeader.classList.add("visible");
 
     // Scene 3 — crossfade to rendered desktop
     screenContents.forEach((el) => el.classList.add("visible"));
