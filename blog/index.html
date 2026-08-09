@@ -87,6 +87,22 @@ footer { text-align: center; padding: 2rem 1.5rem; color: var(--muted); font-siz
 <div class="blog-grid" id="blogGrid"></div>
 <div class="empty-state" id="emptyState" style="display: none;">No blog posts yet. Check back soon!</div>
 </main>
+<div class="modal" id="authModal">
+<div class="modal-content">
+<button class="modal-close" onclick="closeAuthModal()">✕</button>
+<h2 class="display" style="margin-bottom: 1.5rem;">Admin Login</h2>
+<form onsubmit="handleAdminLogin(event)">
+<div class="form-group">
+<label for="adminPassword">Password</label>
+<input type="password" id="adminPassword" required/>
+</div>
+<div class="form-actions">
+<button type="submit" class="btn-primary">Login</button>
+<button type="button" class="btn-secondary" onclick="closeAuthModal()">Cancel</button>
+</div>
+</form>
+</div>
+</div>
 <div class="modal" id="addModal">
 <div class="modal-content">
 <button class="modal-close" onclick="closeAddModal()">✕</button>

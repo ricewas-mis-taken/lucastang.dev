@@ -50,11 +50,11 @@ function renderPosts() {
 }
 
 function openAddModal() {
-  if (!isAdmin()) {
-    alert('Admin access required');
-    return;
+  if (!localStorage.getItem(ADMIN_KEY)) {
+    document.getElementById('authModal').classList.add('show');
+  } else {
+    document.getElementById('addModal').classList.add('show');
   }
-  document.getElementById('addModal').classList.add('show');
 }
 
 function closeAddModal() {
@@ -63,6 +63,24 @@ function closeAddModal() {
   document.getElementById('date').value = '';
   document.getElementById('thumbnailUrl').value = '';
   document.getElementById('content').value = '';
+}
+
+function closeAuthModal() {
+  document.getElementById('authModal').classList.remove('show');
+  document.getElementById('adminPassword').value = '';
+}
+
+function handleAdminLogin(event) {
+  event.preventDefault();
+  const password = document.getElementById('adminPassword').value;
+  if (password === 'admin123') {
+    localStorage.setItem(ADMIN_KEY, 'true');
+    closeAuthModal();
+    document.getElementById('addModal').classList.add('show');
+  } else {
+    alert('Incorrect password');
+    document.getElementById('adminPassword').value = '';
+  }
 }
 
 function handleAddPost(event) {
@@ -200,15 +218,6 @@ function getComplementaryPastelColor(imageUrl) {
   }
 
   return colors[Math.abs(hash) % colors.length];
-}
-
-function isAdmin() {
-  const password = prompt('Enter admin password:');
-  if (password === 'admin123') {
-    localStorage.setItem(ADMIN_KEY, 'true');
-    return true;
-  }
-  return false;
 }
 
 function deletePost(id) {
