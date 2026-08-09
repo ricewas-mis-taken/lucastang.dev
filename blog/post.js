@@ -45,7 +45,11 @@ function renderPost(post) {
     <div class="post-content">${paragraphsHtml}</div>
   `;
 
-  syncBackgroundToImage(document.getElementById('postImg'));
+  if (post.background) {
+    document.documentElement.style.setProperty('--bg', post.background);
+  } else {
+    syncBackgroundToImage(document.getElementById('postImg'));
+  }
 }
 
 function escapeHtml(str) {
