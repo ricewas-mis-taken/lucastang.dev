@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Blog — lucastang.dev</title>
+<meta content="Lucas Tang's blog." name="description"/>
+<meta content="lucastang.dev" property="og:title"/>
+<meta content="Lucas Tang's blog." property="og:description"/>
+<link href="/favicon.ico" rel="icon"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #000000;
+  --bg-deep: #000000;
+  --card: #0a0a0a;
+  --orange: #f97316;
+  --orange-dark: #ea5a08;
+  --ink: #ffffff;
+  --muted: #cccccc;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: "Inter", system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--ink); line-height: 1.6; min-height: 100vh; display: flex; flex-direction: column; }
+.display { font-family: "Architects Daughter", cursive; font-weight: 700; }
+header { position: sticky; top: 0; z-index: 50; background: var(--bg-deep); border-bottom: 1px solid #222; }
+.nav { max-width: 1000px; margin: 0 auto; padding: 1.1rem 1.5rem; display: flex; align-items: center; gap: 0.6rem; }
+.logo-mark { width: 32px; height: 32px; border-radius: 9px; object-fit: cover; }
+.logo { font-size: 1.2rem; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); }
+.links { margin-left: auto; display: flex; gap: 1.5rem; }
+.links a { color: var(--ink); text-decoration: none; font-weight: 500; transition: color 0.2s ease; }
+.links a:hover { color: var(--orange); }
+main { flex: 1; max-width: 1000px; margin: 0 auto; padding: 3.5rem 1.5rem; width: 100%; }
+.section-title { font-size: clamp(2rem, 5vw, 2.8rem); text-align: center; margin-bottom: 2.5rem; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 1rem; }
+.admin-btn { background: var(--orange); color: #000; border: none; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: background 0.2s ease; margin-left: auto; }
+.admin-btn:hover { background: var(--orange-dark); }
+.blog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; max-width: 1200px; margin: 0 auto; }
+.blog-card { background: var(--card); border: 1px solid #222; border-radius: 12px; overflow: hidden; cursor: pointer; transition: transform 0.2s ease, border-color 0.2s ease; text-decoration: none; color: inherit; display: flex; flex-direction: column; }
+.blog-card:hover { transform: translateY(-4px); border-color: var(--orange); }
+.blog-thumbnail { width: 100%; aspect-ratio: 16 / 9; background: #1a1a1a; overflow: hidden; }
+.blog-thumbnail img { width: 100%; height: 100%; object-fit: cover; }
+.blog-content { padding: 1.2rem; display: flex; flex-direction: column; flex: 1; }
+.blog-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; color: #ffffff; }
+.blog-date { font-size: 0.85rem; color: var(--muted); }
+.empty-state { text-align: center; padding: 3rem 1.5rem; color: var(--muted); }
+footer { text-align: center; padding: 2rem 1.5rem; color: var(--muted); font-size: 0.9rem; border-top: 1px solid #222; }
+.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; }
+.modal.show { display: flex; }
+.modal-content { background: var(--card); border: 1px solid #222; border-radius: 12px; padding: 2rem; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; }
+.modal-close { position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: var(--ink); font-size: 1.5rem; cursor: pointer; }
+.form-group { margin-bottom: 1.2rem; }
+.form-group label { display: block; margin-bottom: 0.4rem; font-weight: 600; }
+.form-group input, .form-group textarea { width: 100%; padding: 0.6rem; background: #111; border: 1px solid #222; border-radius: 8px; color: var(--ink); font-family: inherit; }
+.form-group textarea { resize: vertical; min-height: 200px; }
+.form-actions { display: flex; gap: 1rem; }
+.btn-primary { background: var(--orange); color: #000; border: none; padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-weight: 600; transition: background 0.2s ease; flex: 1; }
+.btn-primary:hover { background: var(--orange-dark); }
+.btn-secondary { background: #222; color: var(--ink); border: none; padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-weight: 600; transition: background 0.2s ease; flex: 1; }
+.btn-secondary:hover { background: #333; }
+@media (max-width: 640px) {
+  .blog-grid { grid-template-columns: 1fr; }
+  .section-title { flex-direction: column; }
+  .admin-btn { margin-left: 0; margin-top: 1rem; width: 100%; }
+}
+</style>
+</head>
+<body>
+<header>
+<div class="nav">
+<a href="/" style="text-decoration:none; display:flex; align-items:center; gap:0.6rem;">
+<img src="/apple-touch-icon.png" alt="Avatar Logo" class="logo-mark" />
+<div class="logo display">lucastang.dev</div>
+</a>
+<nav class="links">
+<a href="/projects/">Projects</a>
+<a href="/blog/">Blog</a>
+<a href="/aboutme/">About Me</a>
+</nav>
+</div>
+</header>
+<main>
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2.5rem;">
+<h1 class="section-title display">Blog</h1>
+<button class="admin-btn" onclick="openAddModal()">+ New Post</button>
+</div>
+<div class="blog-grid" id="blogGrid"></div>
+<div class="empty-state" id="emptyState" style="display: none;">No blog posts yet. Check back soon!</div>
+</main>
+<div class="modal" id="authModal">
+<div class="modal-content">
+<button class="modal-close" onclick="closeAuthModal()">✕</button>
+<h2 class="display" style="margin-bottom: 1.5rem;">Admin Login</h2>
+<form onsubmit="handleAdminLogin(event)">
+<div class="form-group">
+<label for="adminPassword">Password</label>
+<input type="password" id="adminPassword" required/>
+</div>
+<div class="form-actions">
+<button type="submit" class="btn-primary">Login</button>
+<button type="button" class="btn-secondary" onclick="closeAuthModal()">Cancel</button>
+</div>
+</form>
+</div>
+</div>
+<div class="modal" id="addModal">
+<div class="modal-content">
+<button class="modal-close" onclick="closeAddModal()">✕</button>
+<h2 class="display" style="margin-bottom: 1.5rem;">New Blog Post</h2>
+<form onsubmit="handleAddPost(event)">
+<div class="form-group">
+<label for="title">Title</label>
+<input type="text" id="title" required/>
+</div>
+<div class="form-group">
+<label for="date">Date</label>
+<input type="date" id="date" required/>
+</div>
+<div class="form-group">
+<label for="thumbnailUrl">Thumbnail Image URL</label>
+<input type="url" id="thumbnailUrl" required placeholder="https://..."/>
+</div>
+<div class="form-group">
+<label for="content">Content</label>
+<textarea id="content" required></textarea>
+</div>
+<div class="form-actions">
+<button type="submit" class="btn-primary">Create Post</button>
+<button type="button" class="btn-secondary" onclick="closeAddModal()">Cancel</button>
+</div>
+</form>
+</div>
+</div>
+<footer>© 2026 lucastang.dev</footer>
+<script src="/blog/seed-posts.js"></script>
+<script src="/blog/blog.js"></script>
+</body>
+</html>
