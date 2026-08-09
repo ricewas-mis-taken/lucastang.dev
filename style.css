@@ -484,17 +484,45 @@ body {
   bottom: 2rem;
   left: 50%;
   transform: translateX(-50%);
-  color: rgba(255,255,255,.55);
-  font-size: 0.8rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  animation: bob 2s ease-in-out infinite;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
   transition: opacity .3s ease;
 }
 
-@keyframes bob {
-  0%, 100% { transform: translate(-50%, 0); }
-  50% { transform: translate(-50%, 6px); }
+.scroll-chevrons {
+  width: 20px;
+  height: 30px;
+  overflow: visible;
+}
+
+.chevron {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: chevronPulse 1.8s ease-in-out infinite;
+}
+
+.chevron.c1 { animation-delay: 0s; }
+.chevron.c2 { animation-delay: .15s; }
+.chevron.c3 { animation-delay: .3s; }
+
+@keyframes chevronPulse {
+  0%   { opacity: 0; }
+  30%  { opacity: 1; }
+  60%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.scroll-text {
+  color: #ffffff;
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0.7;
 }
 
 body.booted #scroll-hint { opacity: 0; pointer-events: none; }
@@ -505,5 +533,10 @@ body.booted #scroll-hint { opacity: 0; pointer-events: none; }
   #stage, .monitor-overlay, .screen-content, #site-header, #terminal-panel {
     transition: none !important;
     animation: none !important;
+  }
+
+  .chevron {
+    animation: none !important;
+    opacity: 1;
   }
 }
