@@ -89,7 +89,7 @@ const TRACKS = [
 // Call the Worker's own *.workers.dev subdomain instead — the Worker's CORS
 // headers (see worker/src/index.js) allow this origin explicitly.
 // Replace with the actual subdomain after `wrangler deploy`.
-const GITHUB_API_URL = "https://lucastang-dev-api.YOUR-SUBDOMAIN.workers.dev/api/github";
+const GITHUB_API_URL = "https://lucastang-dev-api.lucastang.workers.dev/api/github";
 
 // Used only if the /api/github fetch fails (offline, Worker not deployed
 // yet, rate-limited, etc.) so the panel never renders empty.
