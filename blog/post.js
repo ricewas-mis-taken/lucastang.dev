@@ -1,6 +1,3 @@
-const STORAGE_KEY = 'lucastang_blog_posts';
-const ADMIN_KEY = 'lucastang_blog_admin';
-
 function getPostIdFromQuery() {
   const params = new URLSearchParams(window.location.search);
   return params.get('id');
@@ -8,10 +5,7 @@ function getPostIdFromQuery() {
 
 function loadPost() {
   const postId = getPostIdFromQuery();
-  const stored = localStorage.getItem(STORAGE_KEY);
-  const userPosts = stored ? JSON.parse(stored) : [];
-  const posts = [...userPosts, ...SEED_POSTS];
-  const post = posts.find(p => p.id === postId);
+  const post = SEED_POSTS.find(p => p.id === postId);
 
   if (!post) {
     renderNotFound();
@@ -25,7 +19,7 @@ function renderNotFound() {
   document.getElementById('postBody').innerHTML = `
     <div class="not-found">
       <h1 class="display">Post not found</h1>
-      <p style="margin-top: 1rem;">This post may have been deleted or the link is incorrect.</p>
+      <p style="margin-top: 1rem;">This post may have been removed or the link is incorrect.</p>
     </div>
   `;
 }
@@ -37,7 +31,6 @@ function renderPost(post) {
   document.getElementById('pageTitle').textContent = `${post.title} — lucastang.dev`;
   document.getElementById('metaDesc').setAttribute('content', post.title);
 
-  const isAdmin = localStorage.getItem(ADMIN_KEY) === 'true';
   const paragraphsHtml = post.content.split('\n').map(p => p.trim() ? `<p>${escapeHtml(p)}</p>` : '').join('');
 
   document.getElementById('postBody').innerHTML = `
@@ -46,7 +39,6 @@ function renderPost(post) {
       <h1 class="post-title display">${escapeHtml(post.title)}</h1>
       <div class="post-meta">
         <span>${formattedDate}</span>
-        <button class="delete-btn" id="deleteBtn" style="display:${isAdmin ? 'inline-block' : 'none'};" onclick="deletePost('${post.id}')">Delete</button>
       </div>
     </div>
     <div class="divider"></div>
@@ -137,21 +129,6 @@ function hslToHex(h, s, l) {
 
   const toHex = v => Math.round((v + m) * 255).toString(16).padStart(2, '0');
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
-
-function deletePost(id) {
-  if (localStorage.getItem(ADMIN_KEY) !== 'true') {
-    alert('Admin access required');
-    return;
-  }
-  if (!confirm('Are you sure you want to delete this post?')) return;
-
-  const stored = localStorage.getItem(STORAGE_KEY);
-  const posts = stored ? JSON.parse(stored) : [];
-  const filtered = posts.filter(p => p.id !== id);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
-
-  window.location.href = '/blog/';
 }
 
 loadPost();
