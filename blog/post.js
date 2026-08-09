@@ -9,7 +9,8 @@ function getPostIdFromQuery() {
 function loadPost() {
   const postId = getPostIdFromQuery();
   const stored = localStorage.getItem(STORAGE_KEY);
-  const posts = stored ? JSON.parse(stored) : [];
+  const userPosts = stored ? JSON.parse(stored) : [];
+  const posts = [...userPosts, ...SEED_POSTS];
   const post = posts.find(p => p.id === postId);
 
   if (!post) {

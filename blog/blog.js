@@ -4,12 +4,15 @@ let posts = [];
 
 function loadPosts() {
   const stored = localStorage.getItem(STORAGE_KEY);
-  posts = stored ? JSON.parse(stored) : [];
+  const userPosts = stored ? JSON.parse(stored) : [];
+  posts = [...userPosts, ...SEED_POSTS];
   renderPosts();
 }
 
 function savePosts() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
+  const seedIds = new Set(SEED_POSTS.map(p => p.id));
+  const userPosts = posts.filter(p => !seedIds.has(p.id));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(userPosts));
 }
 
 function renderPosts() {
