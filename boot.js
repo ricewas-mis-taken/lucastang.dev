@@ -57,6 +57,13 @@ const MAX_DESK_BLUR = 6; // px, applied at full scroll-in (scale = ZOOM_MAX)
 // blurred sliver of the photo visible around the screen.
 const BEZEL_PAD = 2;
 
+// The desk photo itself is shot at a slight tilt — the bottom monitor's
+// bezel isn't axis-aligned like the top one. Rotating the overlay to match
+// makes its rotated bounding box larger than the unrotated box, so shrink
+// it a few percent to keep the corners tucked inside the bezel.
+const BOTTOM_TILT_DEG = -1.8;
+const BOTTOM_TILT_SHRINK = 0.94;
+
 // Static snapshot of the real playlist (id 33zDbT2VaLbq6yCFW05piK) — track
 // name/artist/album-art/preview clip pulled directly from Spotify's public
 // embed + track pages. No live API/Worker call at runtime.
@@ -142,14 +149,21 @@ document.addEventListener("DOMContentLoaded", () => {
       deskPhoto.naturalWidth,
       deskPhoto.naturalHeight
     );
-    const place = (el, frac) => {
-      el.style.left = `${renderX + frac.x * renderW - BEZEL_PAD}px`;
-      el.style.top = `${renderY + frac.y * renderH - BEZEL_PAD}px`;
-      el.style.width = `${frac.w * renderW + BEZEL_PAD * 2}px`;
-      el.style.height = `${frac.h * renderH + BEZEL_PAD * 2}px`;
+    const place = (el, frac, opts) => {
+      const shrink = (opts && opts.shrink) || 1;
+      const fullW = frac.w * renderW + BEZEL_PAD * 2;
+      const fullH = frac.h * renderH + BEZEL_PAD * 2;
+      const w = fullW * shrink;
+      const h = fullH * shrink;
+      el.style.left = `${renderX + frac.x * renderW - BEZEL_PAD + (fullW - w) / 2}px`;
+      el.style.top = `${renderY + frac.y * renderH - BEZEL_PAD + (fullH - h) / 2}px`;
+      el.style.width = `${w}px`;
+      el.style.height = `${h}px`;
+      el.style.transform = opts && opts.rotateDeg ? `rotate(${opts.rotateDeg}deg)` : "";
+      el.style.transformOrigin = "center center";
     };
     place(topOverlay, SCREENS.top);
-    place(bottomOverlay, SCREENS.bottom);
+    place(bottomOverlay, SCREENS.bottom, { rotateDeg: BOTTOM_TILT_DEG, shrink: BOTTOM_TILT_SHRINK });
     refreshZoomBounds();
   }
 
