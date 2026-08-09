@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Sample Blog Post — lucastang.dev</title>
-<meta content="A sample blog post" name="description"/>
+<title id="pageTitle">Post — lucastang.dev</title>
+<meta content="" name="description" id="metaDesc"/>
 <link href="/favicon.ico" rel="icon"/>
 <link href="https://fonts.googleapis.com" rel="preconnect"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
 <link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
 :root {
-  --bg: #f9e4d4;
+  --bg: #0a0a0a;
   --bg-deep: #000000;
   --card: #0a0a0a;
   --orange: #f97316;
@@ -20,7 +20,7 @@
   --muted: #cccccc;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: "Inter", system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--ink); line-height: 1.6; min-height: 100vh; display: flex; flex-direction: column; }
+body { font-family: "Inter", system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--ink); line-height: 1.6; min-height: 100vh; display: flex; flex-direction: column; transition: background 0.4s ease; }
 .display { font-family: "Architects Daughter", cursive; font-weight: 700; }
 header { position: sticky; top: 0; z-index: 50; background: var(--bg-deep); border-bottom: 1px solid #222; }
 .nav { max-width: 1000px; margin: 0 auto; padding: 1.1rem 1.5rem; display: flex; align-items: center; gap: 0.6rem; }
@@ -30,19 +30,19 @@ header { position: sticky; top: 0; z-index: 50; background: var(--bg-deep); bord
 .links a { color: var(--ink); text-decoration: none; font-weight: 500; transition: color 0.2s ease; }
 .links a:hover { color: var(--orange); }
 main { flex: 1; max-width: 800px; margin: 0 auto; padding: 3.5rem 1.5rem; width: 100%; }
-.post-header { margin-bottom: 2rem; }
-.post-title { font-size: 2.2rem; font-weight: 700; margin-bottom: 0.5rem; }
-.post-meta { display: flex; align-items: center; gap: 1rem; font-size: 0.95rem; color: var(--muted); }
 .back-link { display: inline-block; margin-bottom: 2rem; color: var(--orange); text-decoration: none; font-weight: 600; transition: color 0.2s ease; }
 .back-link:hover { color: var(--orange-dark); }
-.post-image { width: 100%; border-radius: 12px; margin-bottom: 2rem; }
-.divider { height: 1px; background: #444; margin: 2rem 0; }
-.post-content { font-size: 1.05rem; line-height: 1.8; color: var(--muted); }
-.post-content p { margin-bottom: 1.5rem; }
-.post-content h2 { font-size: 1.5rem; margin-top: 2rem; margin-bottom: 1rem; color: var(--ink); }
-footer { text-align: center; padding: 2rem 1.5rem; color: var(--muted); font-size: 0.9rem; border-top: 1px solid #222; }
+.post-image { width: 100%; border-radius: 12px; margin-bottom: 2rem; display: block; aspect-ratio: 16/9; object-fit: cover; background: #1a1a1a; }
+.post-header { margin-bottom: 1.5rem; }
+.post-title { font-size: 2.2rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--ink); }
+.post-meta { display: flex; align-items: center; justify-content: space-between; gap: 1rem; font-size: 0.95rem; color: var(--muted); }
+.divider { height: 1px; background: rgba(255,255,255,0.2); margin: 1.5rem 0 2rem; }
+.post-content { font-size: 1.05rem; line-height: 1.8; color: var(--ink); }
+.post-content p { margin-bottom: 1.4rem; }
 .delete-btn { background: #c03030; color: #fff; border: none; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: background 0.2s ease; display: none; }
 .delete-btn:hover { background: #a02020; }
+.not-found { text-align: center; padding: 4rem 1.5rem; color: var(--muted); }
+footer { text-align: center; padding: 2rem 1.5rem; color: var(--muted); font-size: 0.9rem; border-top: 1px solid #222; }
 @media (max-width: 640px) {
   main { padding: 2rem 1rem; }
   .post-title { font-size: 1.6rem; }
@@ -63,23 +63,9 @@ footer { text-align: center; padding: 2rem 1.5rem; color: var(--muted); font-siz
 </nav>
 </div>
 </header>
-<main>
+<main id="postMain">
 <a href="/blog/" class="back-link">← Back to Blog</a>
-<div class="post-header">
-<h1 class="post-title display">Sample Blog Post</h1>
-<div class="post-meta">
-<span>Aug 8, 2026</span>
-</div>
-</div>
-<img src="https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=600&fit=crop" alt="Sample Blog Post" class="post-image"/>
-<div class="divider"></div>
-<div class="post-content">
-<p>This is a sample blog post to demonstrate the blog structure. Replace this with your actual content.</p>
-<p>Each post displays a full-width image at the top, followed by the title, date, and content. The background uses a pastel color that complements the blog post image.</p>
-<h2>Markdown Support</h2>
-<p>You can use line breaks in your content to create multiple paragraphs. Each paragraph will be separated automatically.</p>
-<p>This makes it easy to write blog posts with a clean, readable format.</p>
-</div>
+<div id="postBody"></div>
 </main>
 <footer>© 2026 lucastang.dev</footer>
 <script src="/blog/post.js"></script>
