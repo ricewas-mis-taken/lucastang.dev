@@ -1,0 +1,14 @@
+name = "lucastang-dev-api"
+main = "src/index.js"
+compatibility_date = "2026-08-09"
+
+# Route this Worker onto your zone so the frontend can call a same-origin
+# path (e.g. https://lucastang.dev/api/github). Uncomment and fill in once
+# the zone is added to your Cloudflare account:
+# routes = [
+#   { pattern = "lucastang.dev/api/*", zone_name = "lucastang.dev" }
+# ]
+
+# Required secret (never committed): a GitHub personal access token with
+# public_repo read access, used to raise the API rate limit to 5000/hr.
+#   wrangler secret put GITHUB_TOKEN
