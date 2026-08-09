@@ -2,9 +2,12 @@ name = "lucastang-dev-api"
 main = "src/index.js"
 compatibility_date = "2026-08-09"
 
-# Route this Worker onto your zone so the frontend can call a same-origin
-# path (e.g. https://lucastang.dev/api/github). Uncomment and fill in once
-# the zone is added to your Cloudflare account:
+# lucastang.dev's DNS currently points directly at GitHub Pages (not
+# proxied through Cloudflare), so a route on this zone won't intercept
+# requests — the frontend calls this Worker's own *.workers.dev subdomain
+# instead (see GITHUB_API_URL in boot.js), relying on the CORS headers in
+# src/index.js. If you later move DNS onto Cloudflare, a route becomes an
+# option:
 # routes = [
 #   { pattern = "lucastang.dev/api/*", zone_name = "lucastang.dev" }
 # ]

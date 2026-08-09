@@ -162,6 +162,12 @@ body {
 }
 
 #vscode-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.editor-area {
   position: relative;
   flex: 1;
   display: flex;

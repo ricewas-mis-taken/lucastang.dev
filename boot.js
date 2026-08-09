@@ -50,6 +50,11 @@ const SCREENS = {
   bottom: { x: 0.2818, y: 0.5341, w: 0.3039, h: 0.1979 },
 };
 
+// Column count for the contribution graph — matched to the fallback grid's
+// density since the pane is a fixed, narrow width regardless of how many
+// weeks the API returns.
+const GRAPH_WEEKS = 20;
+
 const MAX_DESK_BLUR = 6; // px, applied at full scroll-in (scale = ZOOM_MAX)
 
 // Extra px the monitor overlay boxes are padded outward by, so the opaque
@@ -58,11 +63,10 @@ const MAX_DESK_BLUR = 6; // px, applied at full scroll-in (scale = ZOOM_MAX)
 const BEZEL_PAD = 2;
 
 // The desk photo itself is shot at a slight tilt — the bottom monitor's
-// bezel isn't axis-aligned like the top one. Rotating the overlay to match
-// makes its rotated bounding box larger than the unrotated box, so shrink
-// it a few percent to keep the corners tucked inside the bezel.
+// bezel isn't axis-aligned like the top one. Untuned starting value; hand-
+// tune against the actual photo (screenshots aren't available in this dev
+// environment to eyeball it against the bezel edges).
 const BOTTOM_TILT_DEG = -1.8;
-const BOTTOM_TILT_SHRINK = 0.94;
 
 // Static snapshot of the real playlist (id 33zDbT2VaLbq6yCFW05piK) — track
 // name/artist/album-art/preview clip pulled directly from Spotify's public
@@ -80,9 +84,12 @@ const TRACKS = [
   { title: "Centuries", artist: "Fall Out Boy", art: "https://i.scdn.co/image/ab67616d0000b2733cf1c1dbcfa3f1ab7282719b", preview: "https://p.scdn.co/mp3-preview/d6fcac6047be8c069b563701022ce2713d7c05cf" },
 ];
 
-// Same-origin path — the Cloudflare Worker in /worker is routed onto
-// lucastang.dev/api/* so this hits the Worker, not GitHub Pages.
-const GITHUB_API_URL = "/api/github";
+// lucastang.dev's DNS points directly at GitHub Pages (not proxied through
+// Cloudflare), so a Worker route on lucastang.dev/api/* would never fire.
+// Call the Worker's own *.workers.dev subdomain instead — the Worker's CORS
+// headers (see worker/src/index.js) allow this origin explicitly.
+// Replace with the actual subdomain after `wrangler deploy`.
+const GITHUB_API_URL = "https://lucastang-dev-api.YOUR-SUBDOMAIN.workers.dev/api/github";
 
 // Used only if the /api/github fetch fails (offline, Worker not deployed
 // yet, rate-limited, etc.) so the panel never renders empty.
@@ -160,21 +167,34 @@ document.addEventListener("DOMContentLoaded", () => {
       deskPhoto.naturalWidth,
       deskPhoto.naturalHeight
     );
+    // Shrinks the box on each axis by exactly the amount its rotated
+    // bounding box would otherwise grow by, so a rotated overlay's corners
+    // still land inside the unrotated bezel footprint: for a W x H box
+    // rotated by angle a, the axis-aligned bbox is
+    //   bboxW = W*cos(a) + H*sin(a), bboxH = W*sin(a) + H*cos(a)
+    // and shrinking each axis by W/bboxW (H/bboxH) cancels that growth.
     const place = (el, frac, opts) => {
-      const shrink = (opts && opts.shrink) || 1;
+      const angleDeg = (opts && opts.rotateDeg) || 0;
       const fullW = frac.w * renderW + BEZEL_PAD * 2;
       const fullH = frac.h * renderH + BEZEL_PAD * 2;
-      const w = fullW * shrink;
-      const h = fullH * shrink;
+      let w = fullW;
+      let h = fullH;
+      if (angleDeg) {
+        const rad = Math.abs(angleDeg) * (Math.PI / 180);
+        const bboxW = fullW * Math.cos(rad) + fullH * Math.sin(rad);
+        const bboxH = fullW * Math.sin(rad) + fullH * Math.cos(rad);
+        w = fullW * (fullW / bboxW);
+        h = fullH * (fullH / bboxH);
+      }
       el.style.left = `${renderX + frac.x * renderW - BEZEL_PAD + (fullW - w) / 2}px`;
       el.style.top = `${renderY + frac.y * renderH - BEZEL_PAD + (fullH - h) / 2}px`;
       el.style.width = `${w}px`;
       el.style.height = `${h}px`;
-      el.style.transform = opts && opts.rotateDeg ? `rotate(${opts.rotateDeg}deg)` : "";
+      el.style.transform = angleDeg ? `rotate(${angleDeg}deg)` : "";
       el.style.transformOrigin = "center center";
     };
     place(topOverlay, SCREENS.top);
-    place(bottomOverlay, SCREENS.bottom, { rotateDeg: BOTTOM_TILT_DEG, shrink: BOTTOM_TILT_SHRINK });
+    place(bottomOverlay, SCREENS.bottom, { rotateDeg: BOTTOM_TILT_DEG });
     refreshZoomBounds();
   }
 
@@ -477,8 +497,13 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const offset = new Date(contributions[0].date + "T00:00:00").getDay();
-    const padded = new Array(offset).fill(null).concat(contributions);
+    // The API returns ~52 weeks, but the panel is only wide enough to show
+    // cells legibly at the same density as the fallback grid (GRAPH_WEEKS
+    // columns) — trim to the most recent weeks rather than cramming all 52
+    // into a fixed-width pane.
+    const trimmed = contributions.slice(-GRAPH_WEEKS * 7);
+    const offset = new Date(trimmed[0].date + "T00:00:00").getDay();
+    const padded = new Array(offset).fill(null).concat(trimmed);
     const weekCount = Math.ceil(padded.length / 7);
 
     graphEl.style.gridTemplateRows = "repeat(7, 1fr)";
@@ -512,7 +537,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderGhGraphFallback(graphEl, monthsEl) {
-    const WEEKS = 20;
+    const WEEKS = GRAPH_WEEKS;
     graphEl.style.gridTemplateRows = "repeat(7, 1fr)";
     graphEl.style.gridTemplateColumns = `repeat(${WEEKS}, 1fr)`;
     monthsEl.style.gridTemplateColumns = `repeat(${WEEKS}, 1fr)`;
