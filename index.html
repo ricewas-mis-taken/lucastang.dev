@@ -22,22 +22,37 @@
     <div class="boot-splash"><div class="boot-spinner"></div></div>
     <div id="top-monitor-inner" class="screen-content">
       <div id="preview-pane">
-        <div class="gh-topbar">
-          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-          <span class="url">github.com/lucastang/lucastang.dev</span>
+        <div class="win-titlebar">
+          <a class="win-url" href="https://github.com/ricewas-mis-taken" target="_blank" rel="noopener noreferrer">github.com/ricewas-mis-taken</a>
+          <div class="win-controls">
+            <span class="win-btn win-min">&#8211;</span>
+            <span class="win-btn win-max">&#9633;</span>
+            <span class="win-btn win-close">&#10005;</span>
+          </div>
         </div>
         <div class="gh-body">
           <main class="gh-main">
-            <div class="gh-stats">
-              <span class="gh-stat">128 stars</span>
-              <span class="gh-stat">24 forks</span>
+            <div class="gh-graph-wrap">
+              <div class="gh-months" id="gh-months"></div>
+              <div class="gh-graph" id="gh-graph"></div>
             </div>
-            <div class="gh-graph" id="gh-graph"></div>
             <ul class="gh-commits" id="gh-commits"></ul>
+            <div class="gh-stats">
+              <span class="gh-stat"><svg class="gh-icon" viewBox="0 0 16 16"><path d="M8 1l2.2 4.6 5 .7-3.6 3.6.9 5-4.5-2.4-4.5 2.4.9-5L1 6.3l5-.7z" fill="currentColor"/></svg><span id="gh-stars">0</span></span>
+              <span class="gh-stat"><svg class="gh-icon" viewBox="0 0 16 16"><path d="M4 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM4 6.5v3M12 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM12 6.5v3M4 9.5A2.5 2.5 0 0 0 6.5 12h3A2.5 2.5 0 0 0 12 9.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg><span id="gh-forks">0</span></span>
+            </div>
           </main>
         </div>
       </div>
       <div id="spotify-pane">
+        <div class="win-titlebar">
+          <span class="win-title-text">Spotify</span>
+          <div class="win-controls">
+            <span class="win-btn win-min">&#8211;</span>
+            <span class="win-btn win-max">&#9633;</span>
+            <span class="win-btn win-close">&#10005;</span>
+          </div>
+        </div>
         <div class="sp-widget">
           <div class="sp-art"><img id="sp-art-img" src="" alt=""/></div>
           <div class="sp-info">
@@ -58,16 +73,54 @@
   <div id="bottom-monitor" class="monitor-overlay">
     <div class="boot-splash"><div class="boot-spinner"></div></div>
     <div id="code-stage" class="screen-content">
-      <div id="code-editor">
-        <div class="gutter"></div>
-        <div class="code-body"></div>
+      <div class="win-titlebar">
+        <span class="win-title-text">boot-sequence.js — lucastang.dev</span>
+        <div class="win-controls">
+          <span class="win-btn win-min">&#8211;</span>
+          <span class="win-btn win-max">&#9633;</span>
+          <span class="win-btn win-close">&#10005;</span>
+        </div>
       </div>
-      <div id="terminal-panel"></div>
+      <div class="vscode-tabbar">
+        <div class="vscode-tab">
+          <span class="vscode-tab-icon"></span>
+          <span class="vscode-tab-name">boot-sequence.js</span>
+          <span class="vscode-tab-close">&#10005;</span>
+        </div>
+      </div>
+      <div id="vscode-body">
+        <div class="vscode-activitybar">
+          <span class="act-icon act-explorer"></span>
+          <span class="act-icon act-search"></span>
+          <span class="act-icon act-scm"></span>
+          <span class="act-icon act-debug"></span>
+        </div>
+        <div class="editor-area">
+          <div id="code-editor">
+            <div class="gutter"></div>
+            <div class="code-body"></div>
+          </div>
+          <div id="terminal-panel"></div>
+        </div>
+      </div>
+      <div class="vscode-statusbar">
+        <span>main*</span>
+        <span>JavaScript</span>
+        <span>UTF-8</span>
+        <span>Ln 8, Col 5</span>
+      </div>
     </div>
   </div>
 </div>
 
-<div id="scroll-hint">Scroll to continue</div>
+<div id="scroll-hint">
+  <svg class="scroll-chevrons" viewBox="0 0 24 34" aria-hidden="true">
+    <path class="chevron c1" d="M4 3 L12 11 L20 3"/>
+    <path class="chevron c2" d="M4 13 L12 21 L20 13"/>
+    <path class="chevron c3" d="M4 23 L12 31 L20 23"/>
+  </svg>
+  <span class="scroll-text">Scroll</span>
+</div>
 
 <header id="site-header">
   <div class="nav">

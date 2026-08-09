@@ -50,12 +50,23 @@ const SCREENS = {
   bottom: { x: 0.2818, y: 0.5341, w: 0.3039, h: 0.1979 },
 };
 
+// Column count for the contribution graph — matched to the fallback grid's
+// density since the pane is a fixed, narrow width regardless of how many
+// weeks the API returns.
+const GRAPH_WEEKS = 20;
+
 const MAX_DESK_BLUR = 6; // px, applied at full scroll-in (scale = ZOOM_MAX)
 
 // Extra px the monitor overlay boxes are padded outward by, so the opaque
 // overlay swallows any blurred/misaligned bezel edge instead of leaving a
 // blurred sliver of the photo visible around the screen.
 const BEZEL_PAD = 2;
+
+// The desk photo itself is shot at a slight tilt — the bottom monitor's
+// bezel isn't axis-aligned like the top one. Untuned starting value; hand-
+// tune against the actual photo (screenshots aren't available in this dev
+// environment to eyeball it against the bezel edges).
+const BOTTOM_TILT_DEG = -1.8;
 
 // Static snapshot of the real playlist (id 33zDbT2VaLbq6yCFW05piK) — track
 // name/artist/album-art/preview clip pulled directly from Spotify's public
@@ -73,11 +84,25 @@ const TRACKS = [
   { title: "Centuries", artist: "Fall Out Boy", art: "https://i.scdn.co/image/ab67616d0000b2733cf1c1dbcfa3f1ab7282719b", preview: "https://p.scdn.co/mp3-preview/d6fcac6047be8c069b563701022ce2713d7c05cf" },
 ];
 
-const GH_COMMITS = [
-  { hash: "a1b2c3d", msg: "Fix monitor alignment", age: "2h" },
-  { hash: "9f8e7d6", msg: "Add boot sequence", age: "1d" },
-  { hash: "5c4b3a2", msg: "Update styles", age: "3d" },
-];
+// lucastang.dev's DNS points directly at GitHub Pages (not proxied through
+// Cloudflare), so a Worker route on lucastang.dev/api/* would never fire.
+// Call the Worker's own *.workers.dev subdomain instead — the Worker's CORS
+// headers (see worker/src/index.js) allow this origin explicitly.
+// Replace with the actual subdomain after `wrangler deploy`.
+const GITHUB_API_URL = "https://lucastang-dev-api.YOUR-SUBDOMAIN.workers.dev/api/github";
+
+// Used only if the /api/github fetch fails (offline, Worker not deployed
+// yet, rate-limited, etc.) so the panel never renders empty.
+const STUB_GH_DATA = {
+  commits: [
+    { sha: "a1b2c3d", message: "Fix monitor alignment", relativeTime: "2h" },
+    { sha: "9f8e7d6", message: "Add boot sequence", relativeTime: "1d" },
+    { sha: "5c4b3a2", message: "Update styles", relativeTime: "3d" },
+  ],
+  stars: 128,
+  forks: 24,
+  contributions: [],
+};
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -113,7 +138,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const codeGutter = document.querySelector("#code-editor .gutter");
   const codeBody = document.querySelector("#code-editor .code-body");
   const terminalPanel = document.getElementById("terminal-panel");
-  const siteHeader = document.getElementById("site-header");
   const scrollHint = document.getElementById("scroll-hint");
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -143,14 +167,34 @@ document.addEventListener("DOMContentLoaded", () => {
       deskPhoto.naturalWidth,
       deskPhoto.naturalHeight
     );
-    const place = (el, frac) => {
-      el.style.left = `${renderX + frac.x * renderW - BEZEL_PAD}px`;
-      el.style.top = `${renderY + frac.y * renderH - BEZEL_PAD}px`;
-      el.style.width = `${frac.w * renderW + BEZEL_PAD * 2}px`;
-      el.style.height = `${frac.h * renderH + BEZEL_PAD * 2}px`;
+    // Shrinks the box on each axis by exactly the amount its rotated
+    // bounding box would otherwise grow by, so a rotated overlay's corners
+    // still land inside the unrotated bezel footprint: for a W x H box
+    // rotated by angle a, the axis-aligned bbox is
+    //   bboxW = W*cos(a) + H*sin(a), bboxH = W*sin(a) + H*cos(a)
+    // and shrinking each axis by W/bboxW (H/bboxH) cancels that growth.
+    const place = (el, frac, opts) => {
+      const angleDeg = (opts && opts.rotateDeg) || 0;
+      const fullW = frac.w * renderW + BEZEL_PAD * 2;
+      const fullH = frac.h * renderH + BEZEL_PAD * 2;
+      let w = fullW;
+      let h = fullH;
+      if (angleDeg) {
+        const rad = Math.abs(angleDeg) * (Math.PI / 180);
+        const bboxW = fullW * Math.cos(rad) + fullH * Math.sin(rad);
+        const bboxH = fullW * Math.sin(rad) + fullH * Math.cos(rad);
+        w = fullW * (fullW / bboxW);
+        h = fullH * (fullH / bboxH);
+      }
+      el.style.left = `${renderX + frac.x * renderW - BEZEL_PAD + (fullW - w) / 2}px`;
+      el.style.top = `${renderY + frac.y * renderH - BEZEL_PAD + (fullH - h) / 2}px`;
+      el.style.width = `${w}px`;
+      el.style.height = `${h}px`;
+      el.style.transform = angleDeg ? `rotate(${angleDeg}deg)` : "";
+      el.style.transformOrigin = "center center";
     };
     place(topOverlay, SCREENS.top);
-    place(bottomOverlay, SCREENS.bottom);
+    place(bottomOverlay, SCREENS.bottom, { rotateDeg: BOTTOM_TILT_DEG });
     refreshZoomBounds();
   }
 
@@ -227,7 +271,6 @@ document.addEventListener("DOMContentLoaded", () => {
     bottomOverlay.classList.remove("flicker");
     bootSplashes.forEach((el) => el.classList.remove("visible"));
     screenContents.forEach((el) => el.classList.remove("visible"));
-    siteHeader.classList.remove("visible");
     terminalPanel.classList.remove("visible");
     terminalPanel.innerHTML = "";
     codeGutter.innerHTML = "";
@@ -246,8 +289,7 @@ document.addEventListener("DOMContentLoaded", () => {
     topOverlay.classList.remove("flicker");
     bottomOverlay.classList.remove("flicker");
     screenContents.forEach((el) => el.classList.add("visible"));
-    siteHeader.classList.add("visible");
-    renderGhMock();
+    fetchAndRenderGh();
     initSpotifyWidget();
     startDesktopLoop(myGen);
   }
@@ -280,13 +322,9 @@ document.addEventListener("DOMContentLoaded", () => {
     stage.style.transition = "none";
     applySceneZoom(ZOOM_MAX);
 
-    // Scene 5 — header reveals as soon as the zoom lands, independent of
-    // the desktop loop below, which keeps running ambiently behind it.
-    siteHeader.classList.add("visible");
-
     // Scene 3 — crossfade to rendered desktop
     screenContents.forEach((el) => el.classList.add("visible"));
-    renderGhMock();
+    fetchAndRenderGh();
     initSpotifyWidget();
     await sleep(TIMING.crossfade);
     if (myGen !== generation) return;
@@ -397,32 +435,120 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // ---------- Fake GitHub mockup (top-left panel) ----------
-  // Fully invented: no real repo data, no network calls, no outbound links.
-  function renderGhMock() {
-    const commitsEl = document.getElementById("gh-commits");
-    const graphEl = document.getElementById("gh-graph");
-    if (!graphEl || graphEl.childElementCount) return; // render once
+  // ---------- GitHub mockup (top-left panel) ----------
+  // Fetches real commit/star/fork/contribution data from the Worker at
+  // GITHUB_API_URL; falls back to STUB_GH_DATA if that fetch fails.
+  let ghInitialized = false;
+  async function fetchAndRenderGh() {
+    if (ghInitialized) return;
+    ghInitialized = true;
 
-    GH_COMMITS.forEach((c) => {
+    let data;
+    try {
+      const res = await fetch(GITHUB_API_URL);
+      if (!res.ok) throw new Error(`bad status ${res.status}`);
+      data = await res.json();
+    } catch (e) {
+      data = STUB_GH_DATA;
+    }
+
+    renderGhCommits(data.commits || STUB_GH_DATA.commits);
+    renderGhStats(data.stars, data.forks);
+    renderGhGraph(data.contributions);
+  }
+
+  function renderGhCommits(commits) {
+    const commitsEl = document.getElementById("gh-commits");
+    if (!commitsEl) return;
+    commitsEl.innerHTML = "";
+    commits.slice(0, 3).forEach((c) => {
       const li = document.createElement("li");
       const hash = document.createElement("span");
       hash.className = "gh-hash";
-      hash.textContent = c.hash;
+      hash.textContent = c.sha;
       const age = document.createElement("em");
-      age.textContent = c.age;
+      age.textContent = c.relativeTime;
       li.appendChild(hash);
-      li.appendChild(document.createTextNode(c.msg + " "));
+      li.appendChild(document.createTextNode(c.message + " "));
       li.appendChild(age);
       commitsEl.appendChild(li);
     });
+  }
 
-    const WEEKS = 20;
+  function renderGhStats(stars, forks) {
+    const starsEl = document.getElementById("gh-stars");
+    const forksEl = document.getElementById("gh-forks");
+    if (starsEl) starsEl.textContent = typeof stars === "number" ? stars : STUB_GH_DATA.stars;
+    if (forksEl) forksEl.textContent = typeof forks === "number" ? forks : STUB_GH_DATA.forks;
+  }
+
+  // Lays the contribution days out as GitHub does: columns = weeks (Sunday
+  // first), rows = day-of-week, with a month label placed above the first
+  // week-column that starts a new month.
+  function renderGhGraph(contributions) {
+    const graphEl = document.getElementById("gh-graph");
+    const monthsEl = document.getElementById("gh-months");
+    if (!graphEl || !monthsEl) return;
+    graphEl.innerHTML = "";
+    monthsEl.innerHTML = "";
+
+    if (!contributions || !contributions.length) {
+      renderGhGraphFallback(graphEl, monthsEl);
+      return;
+    }
+
+    // The API returns ~52 weeks, but the panel is only wide enough to show
+    // cells legibly at the same density as the fallback grid (GRAPH_WEEKS
+    // columns) — trim to the most recent weeks rather than cramming all 52
+    // into a fixed-width pane.
+    const trimmed = contributions.slice(-GRAPH_WEEKS * 7);
+    const offset = new Date(trimmed[0].date + "T00:00:00").getDay();
+    const padded = new Array(offset).fill(null).concat(trimmed);
+    const weekCount = Math.ceil(padded.length / 7);
+
+    graphEl.style.gridTemplateRows = "repeat(7, 1fr)";
+    graphEl.style.gridTemplateColumns = `repeat(${weekCount}, 1fr)`;
+    padded.forEach((day) => {
+      const cell = document.createElement("div");
+      cell.className = "gh-cell";
+      if (day) {
+        cell.dataset.level = day.level;
+        cell.title = `${day.date}: ${day.count} contributions`;
+      } else {
+        cell.classList.add("gh-cell-empty");
+      }
+      graphEl.appendChild(cell);
+    });
+
+    monthsEl.style.gridTemplateColumns = `repeat(${weekCount}, 1fr)`;
+    let lastMonth = -1;
+    for (let w = 0; w < weekCount; w++) {
+      const weekDays = padded.slice(w * 7, w * 7 + 7).filter(Boolean);
+      const label = document.createElement("span");
+      if (weekDays.length) {
+        const month = new Date(weekDays[0].date + "T00:00:00").getMonth();
+        if (month !== lastMonth) {
+          label.textContent = new Date(weekDays[0].date + "T00:00:00").toLocaleDateString("en-US", { month: "short" });
+          lastMonth = month;
+        }
+      }
+      monthsEl.appendChild(label);
+    }
+  }
+
+  function renderGhGraphFallback(graphEl, monthsEl) {
+    const WEEKS = GRAPH_WEEKS;
+    graphEl.style.gridTemplateRows = "repeat(7, 1fr)";
+    graphEl.style.gridTemplateColumns = `repeat(${WEEKS}, 1fr)`;
+    monthsEl.style.gridTemplateColumns = `repeat(${WEEKS}, 1fr)`;
     for (let i = 0; i < WEEKS * 7; i++) {
       const cell = document.createElement("div");
       cell.className = "gh-cell";
       cell.dataset.level = Math.floor(Math.random() * 5);
       graphEl.appendChild(cell);
+    }
+    for (let w = 0; w < WEEKS; w++) {
+      monthsEl.appendChild(document.createElement("span"));
     }
   }
 
