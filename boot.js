@@ -80,11 +80,22 @@ const TRACKS = [
   { title: "Centuries", artist: "Fall Out Boy", art: "https://i.scdn.co/image/ab67616d0000b2733cf1c1dbcfa3f1ab7282719b", preview: "https://p.scdn.co/mp3-preview/d6fcac6047be8c069b563701022ce2713d7c05cf" },
 ];
 
-const GH_COMMITS = [
-  { hash: "a1b2c3d", msg: "Fix monitor alignment", age: "2h" },
-  { hash: "9f8e7d6", msg: "Add boot sequence", age: "1d" },
-  { hash: "5c4b3a2", msg: "Update styles", age: "3d" },
-];
+// Same-origin path — the Cloudflare Worker in /worker is routed onto
+// lucastang.dev/api/* so this hits the Worker, not GitHub Pages.
+const GITHUB_API_URL = "/api/github";
+
+// Used only if the /api/github fetch fails (offline, Worker not deployed
+// yet, rate-limited, etc.) so the panel never renders empty.
+const STUB_GH_DATA = {
+  commits: [
+    { sha: "a1b2c3d", message: "Fix monitor alignment", relativeTime: "2h" },
+    { sha: "9f8e7d6", message: "Add boot sequence", relativeTime: "1d" },
+    { sha: "5c4b3a2", message: "Update styles", relativeTime: "3d" },
+  ],
+  stars: 128,
+  forks: 24,
+  contributions: [],
+};
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -258,7 +269,7 @@ document.addEventListener("DOMContentLoaded", () => {
     topOverlay.classList.remove("flicker");
     bottomOverlay.classList.remove("flicker");
     screenContents.forEach((el) => el.classList.add("visible"));
-    renderGhMock();
+    fetchAndRenderGh();
     initSpotifyWidget();
     startDesktopLoop(myGen);
   }
@@ -293,7 +304,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Scene 3 — crossfade to rendered desktop
     screenContents.forEach((el) => el.classList.add("visible"));
-    renderGhMock();
+    fetchAndRenderGh();
     initSpotifyWidget();
     await sleep(TIMING.crossfade);
     if (myGen !== generation) return;
@@ -404,32 +415,115 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // ---------- Fake GitHub mockup (top-left panel) ----------
-  // Fully invented: no real repo data, no network calls, no outbound links.
-  function renderGhMock() {
-    const commitsEl = document.getElementById("gh-commits");
-    const graphEl = document.getElementById("gh-graph");
-    if (!graphEl || graphEl.childElementCount) return; // render once
+  // ---------- GitHub mockup (top-left panel) ----------
+  // Fetches real commit/star/fork/contribution data from the Worker at
+  // GITHUB_API_URL; falls back to STUB_GH_DATA if that fetch fails.
+  let ghInitialized = false;
+  async function fetchAndRenderGh() {
+    if (ghInitialized) return;
+    ghInitialized = true;
 
-    GH_COMMITS.forEach((c) => {
+    let data;
+    try {
+      const res = await fetch(GITHUB_API_URL);
+      if (!res.ok) throw new Error(`bad status ${res.status}`);
+      data = await res.json();
+    } catch (e) {
+      data = STUB_GH_DATA;
+    }
+
+    renderGhCommits(data.commits || STUB_GH_DATA.commits);
+    renderGhStats(data.stars, data.forks);
+    renderGhGraph(data.contributions);
+  }
+
+  function renderGhCommits(commits) {
+    const commitsEl = document.getElementById("gh-commits");
+    if (!commitsEl) return;
+    commitsEl.innerHTML = "";
+    commits.slice(0, 3).forEach((c) => {
       const li = document.createElement("li");
       const hash = document.createElement("span");
       hash.className = "gh-hash";
-      hash.textContent = c.hash;
+      hash.textContent = c.sha;
       const age = document.createElement("em");
-      age.textContent = c.age;
+      age.textContent = c.relativeTime;
       li.appendChild(hash);
-      li.appendChild(document.createTextNode(c.msg + " "));
+      li.appendChild(document.createTextNode(c.message + " "));
       li.appendChild(age);
       commitsEl.appendChild(li);
     });
+  }
 
+  function renderGhStats(stars, forks) {
+    const starsEl = document.getElementById("gh-stars");
+    const forksEl = document.getElementById("gh-forks");
+    if (starsEl) starsEl.textContent = typeof stars === "number" ? stars : STUB_GH_DATA.stars;
+    if (forksEl) forksEl.textContent = typeof forks === "number" ? forks : STUB_GH_DATA.forks;
+  }
+
+  // Lays the contribution days out as GitHub does: columns = weeks (Sunday
+  // first), rows = day-of-week, with a month label placed above the first
+  // week-column that starts a new month.
+  function renderGhGraph(contributions) {
+    const graphEl = document.getElementById("gh-graph");
+    const monthsEl = document.getElementById("gh-months");
+    if (!graphEl || !monthsEl) return;
+    graphEl.innerHTML = "";
+    monthsEl.innerHTML = "";
+
+    if (!contributions || !contributions.length) {
+      renderGhGraphFallback(graphEl, monthsEl);
+      return;
+    }
+
+    const offset = new Date(contributions[0].date + "T00:00:00").getDay();
+    const padded = new Array(offset).fill(null).concat(contributions);
+    const weekCount = Math.ceil(padded.length / 7);
+
+    graphEl.style.gridTemplateRows = "repeat(7, 1fr)";
+    graphEl.style.gridTemplateColumns = `repeat(${weekCount}, 1fr)`;
+    padded.forEach((day) => {
+      const cell = document.createElement("div");
+      cell.className = "gh-cell";
+      if (day) {
+        cell.dataset.level = day.level;
+        cell.title = `${day.date}: ${day.count} contributions`;
+      } else {
+        cell.classList.add("gh-cell-empty");
+      }
+      graphEl.appendChild(cell);
+    });
+
+    monthsEl.style.gridTemplateColumns = `repeat(${weekCount}, 1fr)`;
+    let lastMonth = -1;
+    for (let w = 0; w < weekCount; w++) {
+      const weekDays = padded.slice(w * 7, w * 7 + 7).filter(Boolean);
+      const label = document.createElement("span");
+      if (weekDays.length) {
+        const month = new Date(weekDays[0].date + "T00:00:00").getMonth();
+        if (month !== lastMonth) {
+          label.textContent = new Date(weekDays[0].date + "T00:00:00").toLocaleDateString("en-US", { month: "short" });
+          lastMonth = month;
+        }
+      }
+      monthsEl.appendChild(label);
+    }
+  }
+
+  function renderGhGraphFallback(graphEl, monthsEl) {
     const WEEKS = 20;
+    graphEl.style.gridTemplateRows = "repeat(7, 1fr)";
+    graphEl.style.gridTemplateColumns = `repeat(${WEEKS}, 1fr)`;
+    monthsEl.style.gridTemplateColumns = `repeat(${WEEKS}, 1fr)`;
     for (let i = 0; i < WEEKS * 7; i++) {
       const cell = document.createElement("div");
       cell.className = "gh-cell";
       cell.dataset.level = Math.floor(Math.random() * 5);
       graphEl.appendChild(cell);
+    }
+    for (let w = 0; w < WEEKS; w++) {
+      monthsEl.appendChild(document.createElement("span"));
     }
   }
 

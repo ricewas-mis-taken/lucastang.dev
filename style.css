@@ -127,11 +127,80 @@ body {
   position: absolute;
   inset: 0;
   transform-origin: center center;
+  display: flex;
+  flex-direction: column;
+}
+
+.vscode-tabbar {
+  display: flex;
+  background: #21252b;
+  flex: 0 0 auto;
+}
+
+.vscode-tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: #282a36;
+  color: #f8f8f2;
+  font-size: clamp(5px, .75vw, 8.5px);
+  border-top: 1.5px solid #f97316;
+}
+
+.vscode-tab-icon {
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  background: #f1fa8c;
+  flex: 0 0 auto;
+}
+
+.vscode-tab-close {
+  color: #8b949e;
+  margin-left: 4px;
+}
+
+#vscode-body {
+  position: relative;
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.vscode-activitybar {
+  flex: 0 0 auto;
+  width: clamp(8px, 2.2vw, 16px);
+  background: #1c2128;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(4px, 1.4vw, 10px);
+  padding-top: 6px;
+}
+
+.act-icon {
+  width: 45%;
+  aspect-ratio: 1;
+  border: 1.2px solid #8b949e;
+  border-radius: 2px;
+  opacity: 0.75;
+}
+
+.vscode-statusbar {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 10px;
+  background: #007acc;
+  color: #fff;
+  font-size: clamp(4px, .65vw, 7.5px);
+  padding: 2px 6px;
 }
 
 #code-editor {
   display: flex;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   background: #282a36;
   font-size: clamp(5px, 0.75vw, 9px);
   line-height: 1.6;
@@ -197,32 +266,59 @@ body {
   flex-direction: column;
 }
 
-/* ---------- Fake GitHub mockup (top-left panel) ----------
-   Entirely static/invented: no real repo data, no outbound links. */
+/* ---------- Windows-style title bar (shared: GitHub / Spotify / VS Code) ---------- */
 
-.gh-topbar {
+.win-titlebar {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   padding: 3px 6px;
   background: #1c2128;
   font-size: clamp(5px, .8vw, 9px);
-  color: #8b949e;
+  color: #c9d1d9;
   flex: 0 0 auto;
 }
 
-.gh-topbar .dot {
-  width: 5px; height: 5px; border-radius: 50%; background: #495264;
-}
-
-.gh-topbar .url {
+.win-url {
   flex: 1;
   background: #0d1117;
   border-radius: 6px;
   padding: 1px 6px;
-  margin-left: 4px;
   color: #c9d1d9;
+  text-decoration: none;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
+.win-title-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.win-controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+}
+
+.win-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  line-height: 1;
+  color: #8b949e;
+  border-radius: 2px;
+}
+
+/* ---------- Fake GitHub mockup (top-left panel) ----------
+   Entirely static/invented fallback; live data comes from /api/github. */
 
 .gh-body {
   flex: 1;
@@ -240,20 +336,24 @@ body {
   min-height: 0;
 }
 
-.gh-stats {
-  display: flex;
-  gap: 8px;
-  color: #8b949e;
+.gh-graph-wrap {
   flex: 0 0 auto;
-  margin-bottom: 4px;
+  margin-bottom: 5px;
+}
+
+.gh-months {
+  display: grid;
+  gap: 1.5px;
+  grid-auto-flow: column;
+  color: #565d68;
+  font-size: clamp(4px, .65vw, 7px);
+  margin-bottom: 2px;
 }
 
 .gh-graph {
   display: grid;
-  grid-template-columns: repeat(20, 1fr);
+  grid-auto-flow: column;
   gap: 1.5px;
-  flex: 0 0 auto;
-  margin-bottom: 5px;
 }
 
 .gh-graph .gh-cell {
@@ -262,6 +362,8 @@ body {
   border-radius: 1px;
   background: #161b22;
 }
+
+.gh-graph .gh-cell.gh-cell-empty { background: transparent; }
 
 .gh-graph .gh-cell[data-level="1"] { background: #0e4429; }
 .gh-graph .gh-cell[data-level="2"] { background: #006d32; }
@@ -273,6 +375,7 @@ body {
   color: #8b949e;
   line-height: 1.7;
   overflow: hidden;
+  flex: 0 0 auto;
 }
 
 .gh-commits .gh-hash {
@@ -286,16 +389,39 @@ body {
   color: #565d68;
 }
 
+.gh-stats {
+  display: flex;
+  gap: 10px;
+  color: #8b949e;
+  flex: 0 0 auto;
+  margin-top: 5px;
+}
+
+.gh-stat {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.gh-icon {
+  width: 9px;
+  height: 9px;
+  color: #8b949e;
+}
+
 /* ---------- Custom Spotify-style widget (top-right panel) ----------
    Own player UI over real static playlist data (see boot.js TRACKS), not
    Spotify's iframe/chrome. */
 
 #spotify-pane {
   background: #121212;
+  display: flex;
+  flex-direction: column;
 }
 
 .sp-widget {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
