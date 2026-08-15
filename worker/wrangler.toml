@@ -15,3 +15,11 @@ compatibility_date = "2026-08-09"
 # Required secret (never committed): a GitHub personal access token with
 # public_repo read access, used to raise the API rate limit to 5000/hr.
 #   wrangler secret put GITHUB_TOKEN
+
+# The /api/leaderboard route (src/index.js) needs a KV namespace to persist
+# entries across visitors. Not provisioned yet — create one and uncomment:
+#   wrangler kv namespace create LEADERBOARD_KV
+# then paste the printed id below.
+# [[kv_namespaces]]
+# binding = "LEADERBOARD_KV"
+# id = "REPLACE_WITH_NAMESPACE_ID"

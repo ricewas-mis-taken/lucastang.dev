@@ -2,10 +2,14 @@ const ALLOWED_ORIGIN = "https://lucastang.dev";
 const REPO = "ricewas-mis-taken/lucastang.dev";
 const CACHE_TTL_SECONDS = 900; // 15 min
 
+const LEADERBOARD_KV_KEY = "entries";
+const LEADERBOARD_MAX_ENTRIES = 100;
+const LEADERBOARD_NAME_MAX = 5;
+
 function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
   };
 }
@@ -94,6 +98,69 @@ async function handleGithub(request, env, ctx) {
   return response;
 }
 
+async function readLeaderboard(env) {
+  const stored = await env.LEADERBOARD_KV.get(LEADERBOARD_KV_KEY, "json");
+  return Array.isArray(stored) ? stored : [];
+}
+
+async function handleLeaderboardGet(env) {
+  let entries;
+  try {
+    entries = await readLeaderboard(env);
+  } catch (e) {
+    // e.g. LEADERBOARD_KV isn't bound yet — the client falls back to its
+    // own seed rows on any non-2xx response.
+    return new Response(JSON.stringify({ error: "kv_unavailable" }), {
+      status: 503,
+      headers: { "Content-Type": "application/json", ...corsHeaders() },
+    });
+  }
+  return new Response(JSON.stringify(entries), {
+    status: 200,
+    headers: { "Content-Type": "application/json", ...corsHeaders() },
+  });
+}
+
+async function handleLeaderboardPost(request, env) {
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return new Response(JSON.stringify({ error: "invalid_json" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json", ...corsHeaders() },
+    });
+  }
+
+  const name = typeof body?.name === "string" ? body.name.trim().slice(0, LEADERBOARD_NAME_MAX) : "";
+  const score = Number(body?.score);
+  if (!name || !Number.isFinite(score)) {
+    return new Response(JSON.stringify({ error: "invalid_entry" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json", ...corsHeaders() },
+    });
+  }
+
+  let trimmed;
+  try {
+    const entries = await readLeaderboard(env);
+    entries.push({ name, score });
+    entries.sort((a, b) => b.score - a.score);
+    trimmed = entries.slice(0, LEADERBOARD_MAX_ENTRIES);
+    await env.LEADERBOARD_KV.put(LEADERBOARD_KV_KEY, JSON.stringify(trimmed));
+  } catch (e) {
+    return new Response(JSON.stringify({ error: "kv_unavailable" }), {
+      status: 503,
+      headers: { "Content-Type": "application/json", ...corsHeaders() },
+    });
+  }
+
+  return new Response(JSON.stringify(trimmed), {
+    status: 200,
+    headers: { "Content-Type": "application/json", ...corsHeaders() },
+  });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -104,6 +171,14 @@ export default {
 
     if (url.pathname === "/api/github" && request.method === "GET") {
       return handleGithub(request, env, ctx);
+    }
+
+    if (url.pathname === "/api/leaderboard" && request.method === "GET") {
+      return handleLeaderboardGet(env);
+    }
+
+    if (url.pathname === "/api/leaderboard" && request.method === "POST") {
+      return handleLeaderboardPost(request, env);
     }
 
     return new Response("Not found", { status: 404, headers: corsHeaders() });
