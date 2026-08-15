@@ -2,9 +2,26 @@ const ALLOWED_ORIGIN = "https://lucastang.dev";
 const REPO = "ricewas-mis-taken/lucastang.dev";
 const CACHE_TTL_SECONDS = 900; // 15 min
 
-const LEADERBOARD_KV_KEY = "entries";
+// Leaderboard entries live as a JSON file committed to a dedicated data-only
+// branch of this same repo (not `main`, so a score submission never
+// triggers a Pages rebuild and never pollutes real commit history), read
+// back via GitHub's raw CDN. Reuses GITHUB_TOKEN — the `public_repo` scope
+// it already has for the commit/star widget includes write access to code
+// on public repos, so no new secret or Cloudflare resource is needed.
+const LEADERBOARD_BRANCH = "leaderboard-data";
+const LEADERBOARD_PATH = "leaderboard.json";
+const LEADERBOARD_RAW_URL = `https://raw.githubusercontent.com/${REPO}/${LEADERBOARD_BRANCH}/${LEADERBOARD_PATH}`;
+const LEADERBOARD_CONTENTS_URL = `https://api.github.com/repos/${REPO}/contents/${LEADERBOARD_PATH}`;
 const LEADERBOARD_MAX_ENTRIES = 100;
 const LEADERBOARD_NAME_MAX = 5;
+
+function utf8ToBase64(str) {
+  return btoa(unescape(encodeURIComponent(str)));
+}
+
+function base64ToUtf8(b64) {
+  return decodeURIComponent(escape(atob(b64.replace(/\n/g, ""))));
+}
 
 function corsHeaders() {
   return {
@@ -98,27 +115,29 @@ async function handleGithub(request, env, ctx) {
   return response;
 }
 
-async function readLeaderboard(env) {
-  const stored = await env.LEADERBOARD_KV.get(LEADERBOARD_KV_KEY, "json");
-  return Array.isArray(stored) ? stored : [];
-}
-
-async function handleLeaderboardGet(env) {
-  let entries;
+async function handleLeaderboardGet() {
   try {
-    entries = await readLeaderboard(env);
+    const res = await fetch(LEADERBOARD_RAW_URL);
+    if (res.status === 404) {
+      // Branch/file not created yet — the client falls back to its own
+      // seed rows on an empty list, same as any other empty leaderboard.
+      return new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders() },
+      });
+    }
+    if (!res.ok) throw new Error(`raw fetch ${res.status}`);
+    const entries = await res.json();
+    return new Response(JSON.stringify(Array.isArray(entries) ? entries : []), {
+      status: 200,
+      headers: { "Content-Type": "application/json", ...corsHeaders() },
+    });
   } catch (e) {
-    // e.g. LEADERBOARD_KV isn't bound yet — the client falls back to its
-    // own seed rows on any non-2xx response.
-    return new Response(JSON.stringify({ error: "kv_unavailable" }), {
+    return new Response(JSON.stringify({ error: "leaderboard_unavailable" }), {
       status: 503,
       headers: { "Content-Type": "application/json", ...corsHeaders() },
     });
   }
-  return new Response(JSON.stringify(entries), {
-    status: 200,
-    headers: { "Content-Type": "application/json", ...corsHeaders() },
-  });
 }
 
 async function handleLeaderboardPost(request, env) {
@@ -141,15 +160,42 @@ async function handleLeaderboardPost(request, env) {
     });
   }
 
+  const githubHeaders = {
+    Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+    "User-Agent": "lucastang-dev-worker",
+    Accept: "application/vnd.github+json",
+  };
+
   let trimmed;
   try {
-    const entries = await readLeaderboard(env);
+    let entries = [];
+    let sha;
+    const getRes = await fetch(`${LEADERBOARD_CONTENTS_URL}?ref=${LEADERBOARD_BRANCH}`, { headers: githubHeaders });
+    if (getRes.ok) {
+      const file = await getRes.json();
+      sha = file.sha;
+      entries = JSON.parse(base64ToUtf8(file.content));
+    } else if (getRes.status !== 404) {
+      throw new Error(`github get ${getRes.status}`);
+    }
+
     entries.push({ name, score });
     entries.sort((a, b) => b.score - a.score);
     trimmed = entries.slice(0, LEADERBOARD_MAX_ENTRIES);
-    await env.LEADERBOARD_KV.put(LEADERBOARD_KV_KEY, JSON.stringify(trimmed));
+
+    const putRes = await fetch(LEADERBOARD_CONTENTS_URL, {
+      method: "PUT",
+      headers: { ...githubHeaders, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: `leaderboard: add ${name} (${score})`,
+        content: utf8ToBase64(JSON.stringify(trimmed, null, 2)),
+        branch: LEADERBOARD_BRANCH,
+        ...(sha ? { sha } : {}),
+      }),
+    });
+    if (!putRes.ok) throw new Error(`github put ${putRes.status}`);
   } catch (e) {
-    return new Response(JSON.stringify({ error: "kv_unavailable" }), {
+    return new Response(JSON.stringify({ error: "leaderboard_unavailable" }), {
       status: 503,
       headers: { "Content-Type": "application/json", ...corsHeaders() },
     });
@@ -174,7 +220,7 @@ export default {
     }
 
     if (url.pathname === "/api/leaderboard" && request.method === "GET") {
-      return handleLeaderboardGet(env);
+      return handleLeaderboardGet();
     }
 
     if (url.pathname === "/api/leaderboard" && request.method === "POST") {

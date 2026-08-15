@@ -12,14 +12,21 @@ compatibility_date = "2026-08-09"
 #   { pattern = "lucastang.dev/api/*", zone_name = "lucastang.dev" }
 # ]
 
-# Required secret (never committed): a GitHub personal access token with
-# public_repo read access, used to raise the API rate limit to 5000/hr.
+# Required secret (never committed): a GitHub personal access token with the
+# `public_repo` scope. Originally just for raising the GitHub API rate limit
+# to 5000/hr; that scope also grants write access to code on public repos,
+# which /api/leaderboard's POST handler now uses to commit score updates to
+# the leaderboard-data branch (see LEADERBOARD_* constants in src/index.js)
+# — no separate token or Cloudflare resource needed.
 #   wrangler secret put GITHUB_TOKEN
 
-# The /api/leaderboard route (src/index.js) needs a KV namespace to persist
-# entries across visitors. Not provisioned yet — create one and uncomment:
-#   wrangler kv namespace create LEADERBOARD_KV
-# then paste the printed id below.
-# [[kv_namespaces]]
-# binding = "LEADERBOARD_KV"
-# id = "REPLACE_WITH_NAMESPACE_ID"
+# /api/leaderboard reads/writes leaderboard.json on a dedicated
+# "leaderboard-data" branch of this repo (not main) via the GitHub API, so
+# no KV/D1 binding is needed here. That branch needs to exist before the
+# first score submission — see the leaderboard PR description for the
+# one-time setup, or create it directly:
+#   git checkout --orphan leaderboard-data
+#   git rm -rf .
+#   echo "[]" > leaderboard.json
+#   git add leaderboard.json && git commit -m "chore: init leaderboard data branch"
+#   git push -u origin leaderboard-data
