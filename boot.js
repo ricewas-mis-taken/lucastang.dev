@@ -482,6 +482,39 @@ document.addEventListener("DOMContentLoaded", () => {
     if (forksEl) forksEl.textContent = typeof forks === "number" ? forks : STUB_GH_DATA.forks;
   }
 
+  // Custom hover tooltip for gh-graph cells — a single shared element
+  // (rather than one per cell) positioned via clientX/Y, so it tracks the
+  // cursor correctly even though #stage is scaled by the scroll-zoom.
+  let ghTooltipEl = null;
+  function ensureGhTooltip() {
+    if (ghTooltipEl) return ghTooltipEl;
+    ghTooltipEl = document.createElement("div");
+    ghTooltipEl.className = "gh-tooltip";
+    document.body.appendChild(ghTooltipEl);
+    return ghTooltipEl;
+  }
+  function formatGhDate(dateStr) {
+    return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  }
+  function showGhTooltip(e, day) {
+    const el = ensureGhTooltip();
+    el.textContent = `${day.count} contribution${day.count === 1 ? "" : "s"} on ${formatGhDate(day.date)}`;
+    positionGhTooltip(e);
+    el.classList.add("visible");
+  }
+  function positionGhTooltip(e) {
+    if (!ghTooltipEl) return;
+    ghTooltipEl.style.left = `${e.clientX}px`;
+    ghTooltipEl.style.top = `${e.clientY}px`;
+  }
+  function hideGhTooltip() {
+    if (ghTooltipEl) ghTooltipEl.classList.remove("visible");
+  }
+
   // Lays the contribution days out as GitHub does: columns = weeks (Sunday
   // first), rows = day-of-week, with a month label placed above the first
   // week-column that starts a new month.
@@ -513,7 +546,9 @@ document.addEventListener("DOMContentLoaded", () => {
       cell.className = "gh-cell";
       if (day) {
         cell.dataset.level = day.level;
-        cell.title = `${day.date}: ${day.count} contributions`;
+        cell.addEventListener("mouseenter", (e) => showGhTooltip(e, day));
+        cell.addEventListener("mousemove", positionGhTooltip);
+        cell.addEventListener("mouseleave", hideGhTooltip);
       } else {
         cell.classList.add("gh-cell-empty");
       }

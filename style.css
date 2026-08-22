@@ -376,6 +376,37 @@ body {
 .gh-graph .gh-cell[data-level="3"] { background: #26a641; }
 .gh-graph .gh-cell[data-level="4"] { background: #39d353; }
 
+.gh-graph .gh-cell:not(.gh-cell-empty):hover {
+  outline: 1px solid rgba(255, 255, 255, .5);
+  outline-offset: -1px;
+}
+
+/* Shared tooltip for gh-cell hover — appended to <body> and positioned via
+   clientX/Y (position: fixed) so it tracks the cursor correctly regardless
+   of the #stage scroll-zoom scale. */
+.gh-tooltip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -140%);
+  background: #1c2128;
+  color: #e6edf3;
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 4px 8px;
+  border-radius: 5px;
+  border: 1px solid #30363d;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .1s ease;
+  z-index: 9999;
+}
+
+.gh-tooltip.visible {
+  opacity: 1;
+}
+
 .gh-commits {
   list-style: none;
   color: #8b949e;
