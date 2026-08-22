@@ -46,8 +46,8 @@ const TERMINAL_COMMANDS = [
 // fixed CSS %) because the true on-screen box depends on how object-fit:
 // cover crops the photo for the current viewport aspect ratio.
 const SCREENS = {
-  top: { x: 0.3108, y: 0.3333, w: 0.2500, h: 0.1759 },
-  bottom: { x: 0.2818, y: 0.5341, w: 0.3039, h: 0.1979 },
+  top: { x: 0.3059, y: 0.3279, w: 0.2573, h: 0.1818 },
+  bottom: { x: 0.2807, y: 0.5187, w: 0.3045, h: 0.2150 },
 };
 
 // Column count for the contribution graph — matched to the fallback grid's
@@ -62,11 +62,19 @@ const MAX_DESK_BLUR = 6; // px, applied at full scroll-in (scale = ZOOM_MAX)
 // blurred sliver of the photo visible around the screen.
 const BEZEL_PAD = 2;
 
-// The desk photo itself is shot at a slight tilt — the bottom monitor's
-// bezel isn't axis-aligned like the top one. Untuned starting value; hand-
-// tune against the actual photo (screenshots aren't available in this dev
-// environment to eyeball it against the bezel edges).
-const BOTTOM_TILT_DEG = -1.8;
+// The desk photo itself is shot at a slight tilt, so neither monitor's
+// bezel is perfectly axis-aligned. Hand-tuned via calibrate.html — see that
+// file for a drag-to-fit tool that outputs these values directly.
+const TOP_TILT_DEG = 0;
+const BOTTOM_TILT_DEG = 0;
+
+// Keystone: for when the *physical* monitor itself sat angled toward/away
+// from the camera (not just in-plane rotated) — rendered as a CSS 3D
+// rotateX, which tapers the top or bottom edge like real camera perspective
+// instead of just spinning the rectangle. 0 = no correction (default).
+const TOP_KEYSTONE_DEG = -11.0;
+const BOTTOM_KEYSTONE_DEG = 9.0;
+const KEYSTONE_PERSPECTIVE_PX = 900;
 
 // Static snapshot of the real playlist (id 33zDbT2VaLbq6yCFW05piK) — track
 // name/artist/album-art/preview clip pulled directly from Spotify's public
@@ -175,6 +183,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // and shrinking each axis by W/bboxW (H/bboxH) cancels that growth.
     const place = (el, frac, opts) => {
       const angleDeg = (opts && opts.rotateDeg) || 0;
+      const keystoneDeg = (opts && opts.keystoneDeg) || 0;
       const fullW = frac.w * renderW + BEZEL_PAD * 2;
       const fullH = frac.h * renderH + BEZEL_PAD * 2;
       let w = fullW;
@@ -190,11 +199,17 @@ document.addEventListener("DOMContentLoaded", () => {
       el.style.top = `${renderY + frac.y * renderH - BEZEL_PAD + (fullH - h) / 2}px`;
       el.style.width = `${w}px`;
       el.style.height = `${h}px`;
-      el.style.transform = angleDeg ? `rotate(${angleDeg}deg)` : "";
+      // Keystone (rotateX) goes first so it warps the box in its own local
+      // plane before the in-plane rotate spins that already-tapered shape —
+      // matches how a physically angled, then photographed, screen looks.
+      const transformParts = [];
+      if (keystoneDeg) transformParts.push(`perspective(${KEYSTONE_PERSPECTIVE_PX}px) rotateX(${keystoneDeg}deg)`);
+      if (angleDeg) transformParts.push(`rotate(${angleDeg}deg)`);
+      el.style.transform = transformParts.join(" ");
       el.style.transformOrigin = "center center";
     };
-    place(topOverlay, SCREENS.top);
-    place(bottomOverlay, SCREENS.bottom, { rotateDeg: BOTTOM_TILT_DEG });
+    place(topOverlay, SCREENS.top, { rotateDeg: TOP_TILT_DEG, keystoneDeg: TOP_KEYSTONE_DEG });
+    place(bottomOverlay, SCREENS.bottom, { rotateDeg: BOTTOM_TILT_DEG, keystoneDeg: BOTTOM_KEYSTONE_DEG });
     refreshZoomBounds();
   }
 
@@ -482,6 +497,39 @@ document.addEventListener("DOMContentLoaded", () => {
     if (forksEl) forksEl.textContent = typeof forks === "number" ? forks : STUB_GH_DATA.forks;
   }
 
+  // Custom hover tooltip for gh-graph cells — a single shared element
+  // (rather than one per cell) positioned via clientX/Y, so it tracks the
+  // cursor correctly even though #stage is scaled by the scroll-zoom.
+  let ghTooltipEl = null;
+  function ensureGhTooltip() {
+    if (ghTooltipEl) return ghTooltipEl;
+    ghTooltipEl = document.createElement("div");
+    ghTooltipEl.className = "gh-tooltip";
+    document.body.appendChild(ghTooltipEl);
+    return ghTooltipEl;
+  }
+  function formatGhDate(dateStr) {
+    return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  }
+  function showGhTooltip(e, day) {
+    const el = ensureGhTooltip();
+    el.textContent = `${day.count} contribution${day.count === 1 ? "" : "s"} on ${formatGhDate(day.date)}`;
+    positionGhTooltip(e);
+    el.classList.add("visible");
+  }
+  function positionGhTooltip(e) {
+    if (!ghTooltipEl) return;
+    ghTooltipEl.style.left = `${e.clientX}px`;
+    ghTooltipEl.style.top = `${e.clientY}px`;
+  }
+  function hideGhTooltip() {
+    if (ghTooltipEl) ghTooltipEl.classList.remove("visible");
+  }
+
   // Lays the contribution days out as GitHub does: columns = weeks (Sunday
   // first), rows = day-of-week, with a month label placed above the first
   // week-column that starts a new month.
@@ -513,7 +561,9 @@ document.addEventListener("DOMContentLoaded", () => {
       cell.className = "gh-cell";
       if (day) {
         cell.dataset.level = day.level;
-        cell.title = `${day.date}: ${day.count} contributions`;
+        cell.addEventListener("mouseenter", (e) => showGhTooltip(e, day));
+        cell.addEventListener("mousemove", positionGhTooltip);
+        cell.addEventListener("mouseleave", hideGhTooltip);
       } else {
         cell.classList.add("gh-cell-empty");
       }
