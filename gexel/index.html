@@ -44,6 +44,14 @@ main { flex: 1; max-width: 1000px; margin: 0 auto; padding: 3.5rem 1.5rem; width
 .leaderboard-table td { padding: 6px 10px; color: #fff; letter-spacing: 1px; }
 .leaderboard-table th:last-child, .leaderboard-table td:last-child { text-align: right; }
 .leaderboard-table tbody tr:nth-child(odd) { background: rgba(255,255,255,0.04); }
+.nitro {
+  font-weight: 700;
+  background: linear-gradient(90deg, #c9a7ff, #8c5cf5, #5865f2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 16px rgba(140, 92, 245, 0.55);
+}
 </style>
 </head>
 <body>
@@ -59,7 +67,7 @@ main { flex: 1; max-width: 1000px; margin: 0 auto; padding: 3.5rem 1.5rem; width
 <div class="game-wrap">
 <iframe id="gexel-frame" class="game-frame" src="/gexel-game/" allow="fullscreen" allowfullscreen></iframe>
 </div>
-<p class="debug-note">Beat the evil IT and bring back peace to the GEXEL nation! Play through some of the greatest arcade games ever! Beat it once to unlock Compete mode and race the leaderboard below.</p>
+<p class="debug-note">Beat the evil IT and bring back peace to the GEXEL nation! Play through some of the greatest arcade games ever! Every week, the top 10 on the leaderboard will be entered into a raffle to win one year of <span class="nitro">Discord Nitro</span>!</p>
 <div class="leaderboard">
 <div class="leaderboard-title">HIGH SCORES</div>
 <table class="leaderboard-table">
