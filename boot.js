@@ -164,6 +164,13 @@ document.addEventListener("DOMContentLoaded", () => {
   let triggered = false;
   let sceneZoom = ZOOM_MAX;
 
+  // Overlay geometry at zoom = 1 (i.e. the position/size they'd have with no
+  // camera push-in at all). applyOverlayZoom() scales these live against the
+  // current zoom level instead of relying on a shared CSS transform, so the
+  // screens' text/UI is always laid out at its true final size — see the
+  // comments in index.html and style.css for why.
+  const baseRects = { top: null, bottom: null };
+
   // ---------- Monitor screen alignment (object-fit:cover math) ----------
   function updateMonitorPositions() {
     if (!deskPhoto.naturalWidth) return;
@@ -181,7 +188,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // rotated by angle a, the axis-aligned bbox is
     //   bboxW = W*cos(a) + H*sin(a), bboxH = W*sin(a) + H*cos(a)
     // and shrinking each axis by W/bboxW (H/bboxH) cancels that growth.
-    const place = (el, frac, opts) => {
+    const place = (frac, opts) => {
       const angleDeg = (opts && opts.rotateDeg) || 0;
       const keystoneDeg = (opts && opts.keystoneDeg) || 0;
       const fullW = frac.w * renderW + BEZEL_PAD * 2;
@@ -195,22 +202,63 @@ document.addEventListener("DOMContentLoaded", () => {
         w = fullW * (fullW / bboxW);
         h = fullH * (fullH / bboxH);
       }
-      el.style.left = `${renderX + frac.x * renderW - BEZEL_PAD + (fullW - w) / 2}px`;
-      el.style.top = `${renderY + frac.y * renderH - BEZEL_PAD + (fullH - h) / 2}px`;
-      el.style.width = `${w}px`;
-      el.style.height = `${h}px`;
-      // Keystone (rotateX) goes first so it warps the box in its own local
-      // plane before the in-plane rotate spins that already-tapered shape —
-      // matches how a physically angled, then photographed, screen looks.
+      return {
+        left: renderX + frac.x * renderW - BEZEL_PAD + (fullW - w) / 2,
+        top: renderY + frac.y * renderH - BEZEL_PAD + (fullH - h) / 2,
+        w,
+        h,
+        angleDeg,
+        keystoneDeg,
+      };
+    };
+    baseRects.top = place(SCREENS.top, { rotateDeg: TOP_TILT_DEG, keystoneDeg: TOP_KEYSTONE_DEG });
+    baseRects.bottom = place(SCREENS.bottom, { rotateDeg: BOTTOM_TILT_DEG, keystoneDeg: BOTTOM_KEYSTONE_DEG });
+    // Keystone/rotate are angle-only, independent of zoom scale, so they can
+    // be applied to the element once here rather than on every zoom tick.
+    const applyAngle = (el, rect) => {
       const transformParts = [];
-      if (keystoneDeg) transformParts.push(`perspective(${KEYSTONE_PERSPECTIVE_PX}px) rotateX(${keystoneDeg}deg)`);
-      if (angleDeg) transformParts.push(`rotate(${angleDeg}deg)`);
+      if (rect.keystoneDeg) transformParts.push(`perspective(${KEYSTONE_PERSPECTIVE_PX}px) rotateX(${rect.keystoneDeg}deg)`);
+      if (rect.angleDeg) transformParts.push(`rotate(${rect.angleDeg}deg)`);
       el.style.transform = transformParts.join(" ");
       el.style.transformOrigin = "center center";
     };
-    place(topOverlay, SCREENS.top, { rotateDeg: TOP_TILT_DEG, keystoneDeg: TOP_KEYSTONE_DEG });
-    place(bottomOverlay, SCREENS.bottom, { rotateDeg: BOTTOM_TILT_DEG, keystoneDeg: BOTTOM_KEYSTONE_DEG });
+    applyAngle(topOverlay, baseRects.top);
+    applyAngle(bottomOverlay, baseRects.bottom);
     refreshZoomBounds();
+    applyOverlayZoom(sceneZoom);
+  }
+
+  // Rescales the overlay boxes' real left/top/width/height to match the
+  // given zoom level, around the same transform-origin point #stage scales
+  // around — geometrically identical to what `transform: scale(zoom)` would
+  // do, but computed here so the browser lays out/paints the content at its
+  // true target size instead of stretching a pre-rendered bitmap.
+  function applyOverlayZoom(zoom) {
+    if (!baseRects.top || !baseRects.bottom) return;
+    const stageW = stage.offsetWidth;
+    const stageH = stage.offsetHeight;
+    if (!stageW || !stageH) return;
+    const rootStyle = getComputedStyle(document.documentElement);
+    const originX = (parseFloat(rootStyle.getPropertyValue("--cluster-cx")) / 100) * stageW;
+    const originY = (parseFloat(rootStyle.getPropertyValue("--cluster-cy")) / 100) * stageH;
+    const applyOne = (el, rect) => {
+      el.style.left = `${originX + (rect.left - originX) * zoom}px`;
+      el.style.top = `${originY + (rect.top - originY) * zoom}px`;
+      el.style.width = `${rect.w * zoom}px`;
+      el.style.height = `${rect.h * zoom}px`;
+    };
+    applyOne(topOverlay, baseRects.top);
+    applyOne(bottomOverlay, baseRects.bottom);
+  }
+
+  // Toggles the overlay boxes' left/top/width/height transition (see
+  // .monitor-overlay in style.css) in lockstep with #stage's own transform
+  // transition, so the two either both animate together (Scene 2's push-in)
+  // or both jump instantly together (scroll-driven zoom, direct state sets).
+  function setOverlayTransitionEnabled(enabled) {
+    const value = enabled ? "" : "none";
+    topOverlay.style.transition = value;
+    bottomOverlay.style.transition = value;
   }
 
   // Computes how far scroll-in can zoom before either monitor's overlay box
@@ -233,13 +281,10 @@ document.addEventListener("DOMContentLoaded", () => {
       if (s < maxScale) maxScale = s;
     };
 
-    [topOverlay, bottomOverlay].forEach((el) => {
-      const left = parseFloat(el.style.left) || 0;
-      const top = parseFloat(el.style.top) || 0;
-      const width = parseFloat(el.style.width) || 0;
-      const height = parseFloat(el.style.height) || 0;
-      [left, left + width].forEach((x) => consider(x, originX, stageW));
-      [top, top + height].forEach((y) => consider(y, originY, stageH));
+    [baseRects.top, baseRects.bottom].forEach((rect) => {
+      if (!rect) return;
+      [rect.left, rect.left + rect.w].forEach((x) => consider(x, originX, stageW));
+      [rect.top, rect.top + rect.h].forEach((y) => consider(y, originY, stageH));
     });
 
     return Math.min(ZOOM_MAX_DEFAULT, maxScale);
@@ -265,6 +310,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function applySceneZoom(zoom) {
     sceneZoom = zoom;
     stage.style.transform = `scale(${zoom})`;
+    applyOverlayZoom(zoom);
     // Wide shot (scrolled all the way out, zoom = ZOOM_MIN) is fully sharp;
     // blur eases in gradually as you scroll/zoom in toward the monitors,
     // like a shallow depth of field settling on the screens.
@@ -281,6 +327,8 @@ document.addEventListener("DOMContentLoaded", () => {
     stage.classList.remove("zoomed");
     stage.style.transition = "";
     stage.style.transform = "";
+    setOverlayTransitionEnabled(true);
+    applyOverlayZoom(ZOOM_MIN);
     deskPhoto.style.filter = "blur(0px)";
     topOverlay.classList.remove("flicker");
     bottomOverlay.classList.remove("flicker");
@@ -300,6 +348,7 @@ document.addEventListener("DOMContentLoaded", () => {
     triggered = true;
     stage.classList.add("zoomed");
     stage.style.transition = "none";
+    setOverlayTransitionEnabled(false);
     applySceneZoom(ZOOM_MAX);
     topOverlay.classList.remove("flicker");
     bottomOverlay.classList.remove("flicker");
@@ -328,13 +377,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (myGen !== generation) return;
     bootSplashes.forEach((el) => el.classList.remove("visible"));
 
-    // Scene 2 — camera zoom (CSS-driven push-in to the tight monitor frame)
+    // Scene 2 — camera zoom (CSS-driven push-in to the tight monitor frame).
+    // The overlay boxes' own left/top/width/height transition (see
+    // .monitor-overlay in style.css) is still enabled at this point, so
+    // this animates in sync with #stage's CSS transform transition.
     stage.classList.add("zoomed");
+    applyOverlayZoom(ZOOM_MAX);
     await sleep(TIMING.zoom);
     if (myGen !== generation) return;
     // Hand off from the CSS class transition to JS-driven inline transform
     // at the same end value, so post-boot scroll zoom can take over smoothly.
     stage.style.transition = "none";
+    setOverlayTransitionEnabled(false);
     applySceneZoom(ZOOM_MAX);
 
     // Scene 3 — crossfade to rendered desktop
@@ -675,6 +729,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!booted) return;
       const next = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, sceneZoom - e.deltaY * 0.0025));
       stage.style.transition = "none";
+      setOverlayTransitionEnabled(false);
       applySceneZoom(next);
     },
     { passive: true }

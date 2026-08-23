@@ -5,6 +5,13 @@
    overlay divs are positioned in JS against the photo's actual object-fit:
    cover render rect, not fixed CSS %, so alignment holds at any viewport
    aspect ratio. See computeCoverRect()/updateMonitorPositions() in boot.js.
+
+   #stage's scroll-driven zoom scales the desk photo via CSS transform, but
+   #overlay-layer (the monitor screens' text/UI) deliberately sits OUTSIDE
+   that scaled subtree and is repositioned in real px by applyOverlayZoom()
+   in boot.js instead — so the screens' content is always laid out and
+   painted natively at its true on-screen size, not a stretched bitmap,
+   which is what made it look blurry at higher zoom.
    ========================================================================== */
 
 :root {
@@ -59,15 +66,32 @@ body {
   filter: blur(0px);
 }
 
-/* Monitor overlay divs — left/top/width/height are set in boot.js against
-   the photo's computed object-fit:cover render rect, kept in the same
-   untransformed layout space as #stage so the shared #stage scale carries
-   both the photo and these overlays together at any zoom level. */
+/* Sits on top of #stage, unscaled — see the header comment and the note in
+   index.html for why the monitor screens live here instead of inside
+   #stage's transform. pointer-events:none so it doesn't intercept anything
+   in the gaps between the two monitor boxes; .monitor-overlay re-enables
+   pointer-events for itself since its content (Spotify controls, commit
+   links) needs to stay clickable. */
+#overlay-layer {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Monitor overlay divs — left/top/width/height are set in boot.js (in real,
+   unscaled px) against the photo's computed object-fit:cover render rect,
+   then rescaled by applyOverlayZoom() to track #stage's zoom level without
+   ever going through a CSS transform: scale() on this content itself. The
+   left/top/width/height transition here is what makes that rescale animate
+   smoothly during Scene 2's push-in, mirroring #stage's own transform
+   transition above. */
 .monitor-overlay {
   position: absolute;
   overflow: hidden;
   background: #000;
-  transition: opacity .25s ease;
+  pointer-events: auto;
+  transition: opacity .25s ease, left 1.4s cubic-bezier(.62,0,.3,1), top 1.4s cubic-bezier(.62,0,.3,1), width 1.4s cubic-bezier(.62,0,.3,1), height 1.4s cubic-bezier(.62,0,.3,1);
 }
 
 /* ---------- Scene 1: boot flicker ---------- */

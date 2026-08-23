@@ -17,7 +17,17 @@
 
 <div id="stage">
   <img id="desk-photo" src="/assets/desk-photo.png" alt=""/>
+</div>
 
+<!-- Deliberately NOT inside #stage: #stage's transform:scale() zoom is meant
+     for the desk photo (a raster image — blurring it slightly on zoom looks
+     like camera depth of field). If these monitor screens rode along inside
+     that scaled subtree, the browser would render their text/UI as a
+     stretched bitmap instead of laying it out natively at full size, making
+     it look soft/blurry. boot.js positions this layer's children in real,
+     unscaled px (see applyOverlayZoom()) so their content always renders
+     crisp, at any zoom level. -->
+<div id="overlay-layer">
   <div id="top-monitor" class="monitor-overlay">
     <div class="boot-splash"><div class="boot-spinner"></div></div>
     <div id="top-monitor-inner" class="screen-content">
