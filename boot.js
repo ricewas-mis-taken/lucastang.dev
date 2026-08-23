@@ -162,7 +162,12 @@ document.addEventListener("DOMContentLoaded", () => {
   let generation = 0;
   let booted = false;
   let triggered = false;
-  let sceneZoom = ZOOM_MAX;
+  // Tracks #stage's actual current zoom (read by the wheel handler and by
+  // updateMonitorPositions() to keep the overlay layer in sync on resize).
+  // Starts at ZOOM_MIN, not ZOOM_MAX: #stage has no scale applied at all
+  // until Scene 2 runs, so this must reflect what's really on screen right
+  // now, not the value Scene 2 will eventually animate to.
+  let sceneZoom = ZOOM_MIN;
 
   // Overlay geometry at zoom = 1 (i.e. the position/size they'd have with no
   // camera push-in at all). applyOverlayZoom() scales these live against the
@@ -322,7 +327,7 @@ document.addEventListener("DOMContentLoaded", () => {
     generation++;
     booted = false;
     triggered = false;
-    sceneZoom = ZOOM_MAX;
+    sceneZoom = ZOOM_MIN;
     document.body.classList.remove("booted");
     stage.classList.remove("zoomed");
     stage.style.transition = "";
