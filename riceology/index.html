@@ -52,7 +52,7 @@
     margin: 0 auto;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 0.75rem;
+    gap: 0.9rem;
   }
   button.game {
     all: unset;
@@ -60,9 +60,8 @@
     background: var(--card);
     border: 1px solid #2c303a;
     border-radius: 10px;
-    padding: 1rem;
+    overflow: hidden;
     text-align: center;
-    font-size: 0.95rem;
     transition: background 0.12s ease, transform 0.12s ease;
   }
   button.game:hover {
@@ -70,6 +69,18 @@
     transform: translateY(-2px);
   }
   button.game:active { transform: translateY(0); }
+  .game-thumb {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    display: block;
+    background: #000;
+  }
+  .game-name {
+    display: block;
+    padding: 0.65rem 0.75rem;
+    font-size: 0.95rem;
+  }
 </style>
 </head>
 <body>
@@ -87,147 +98,183 @@ const GAMES_BASE = "https://games.lucastang.dev/";
 const games = [
   {
     "name": "celeste classic",
-    "url": "celeste/index.html"
+    "url": "celeste/index.html",
+    "thumb": "thumbnails/celeste.png"
   },
   {
     "name": "doom",
-    "url": "doom/index.html"
+    "url": "doom/index.html",
+    "thumb": "thumbnails/doom.png"
   },
   {
     "name": "fnaf1",
-    "url": "fnaf1/index.html"
+    "url": "fnaf1/index.html",
+    "thumb": "thumbnails/fnaf1.png"
   },
   {
     "name": "jump king",
-    "url": "jumpking/index.html"
+    "url": "jumpking/index.html",
+    "thumb": "thumbnails/jumpking.png"
   },
   {
     "name": "kirby",
-    "url": "kirby/index.html"
+    "url": "kirby/index.html",
+    "thumb": "thumbnails/kirby.png"
   },
   {
     "name": "vex 5",
-    "url": "vex5/index.html"
+    "url": "vex5/index.html",
+    "thumb": "thumbnails/vex5.png"
   },
   {
     "name": "quake",
-    "url": "quake/index.html"
+    "url": "quake/index.html",
+    "thumb": "thumbnails/quake.png"
   },
   {
     "name": "tetris",
-    "url": "tetris/index.html"
+    "url": "tetris/index.html",
+    "thumb": "thumbnails/tetris.png"
   },
   {
     "name": "temple run 2",
-    "url": "templerun2/index.html"
+    "url": "templerun2/index.html",
+    "thumb": "thumbnails/templerun2.png"
   },
   {
     "name": "slope",
-    "url": "slope/index.html"
+    "url": "slope/index.html",
+    "thumb": "thumbnails/slope.png"
   },
   {
     "name": "fnaf4",
-    "url": "fnaf4/index.html"
+    "url": "fnaf4/index.html",
+    "thumb": "thumbnails/fnaf4.png"
   },
   {
     "name": "retro bowl",
-    "url": "retrobowl/index.html"
+    "url": "retrobowl/index.html",
+    "thumb": "thumbnails/retrobowl.jpg"
   },
   {
     "name": "vex6",
-    "url": "vex6/index.html"
+    "url": "vex6/index.html",
+    "thumb": "thumbnails/vex6.png"
   },
   {
     "name": "run3",
-    "url": "run3/index.html"
+    "url": "run3/index.html",
+    "thumb": "thumbnails/run3.png"
   },
   {
     "name": "bitlife",
-    "url": "bitlife/index.html"
+    "url": "bitlife/index.html",
+    "thumb": "thumbnails/bitlife.png"
   },
   {
     "name": "subway surfers",
-    "url": "subway/index.html"
+    "url": "subway/index.html",
+    "thumb": "thumbnails/subway.png"
   },
   {
     "name": "vex7",
-    "url": "vex7/index.html"
+    "url": "vex7/index.html",
+    "thumb": "thumbnails/vex7.png"
   },
   {
     "name": "portal 2d",
-    "url": "portal2d/index.html"
+    "url": "portal2d/index.html",
+    "thumb": "thumbnails/portal2d.png"
   },
   {
     "name": "basketball stars",
-    "url": "basketballstars/index.html"
+    "url": "basketballstars/index.html",
+    "thumb": "thumbnails/basketballstars.png"
   },
   {
     "name": "meat boy",
-    "url": "meatboy/index.html"
+    "url": "meatboy/index.html",
+    "thumb": "thumbnails/meatboy.png"
   },
   {
     "name": "binding of issac",
-    "url": "bindingofissac/index.html"
+    "url": "bindingofissac/index.html",
+    "thumb": "thumbnails/bindingofissac.png"
   },
   {
     "name": "boxing random",
-    "url": "boxing-random/index.html"
+    "url": "boxing-random/index.html",
+    "thumb": "thumbnails/boxing-random.png"
   },
   {
     "name": "ngon",
-    "url": "n-gon/index.html"
+    "url": "n-gon/index.html",
+    "thumb": "thumbnails/n-gon.png"
   },
   {
     "name": "friday night funkin'",
-    "url": "fridaynightfunkin/index.html"
+    "url": "fridaynightfunkin/index.html",
+    "thumb": "thumbnails/fridaynightfunkin.jpg"
   },
   {
     "name": "super mario 64",
-    "url": "sm64/index.html"
+    "url": "sm64/index.html",
+    "thumb": "thumbnails/sm64.png"
   },
   {
     "name": "basket random",
-    "url": "basketrandom/index.html"
+    "url": "basketrandom/index.html",
+    "thumb": "thumbnails/basketrandom.png"
   },
   {
     "name": "worlds hardest game",
-    "url": "worldshardestgame/index.html"
+    "url": "worldshardestgame/index.html",
+    "thumb": "thumbnails/worldshardestgame.png"
   },
   {
     "name": "monkey mart",
-    "url": "monkeymart/index.html"
+    "url": "monkeymart/index.html",
+    "thumb": "thumbnails/monkeymart.png"
   },
   {
     "name": "a dark room",
-    "url": "adarkroom/index.html"
+    "url": "adarkroom/index.html",
+    "thumb": "thumbnails/adarkroom.png"
   },
   {
     "name": "crossy road",
-    "url": "crossyroad/index.html"
+    "url": "crossyroad/index.html",
+    "thumb": "thumbnails/crossyroad.png"
   },
   {
     "name": "big tower tiny square",
-    "url": "bigtowertinysquare/index.html"
+    "url": "bigtowertinysquare/index.html",
+    "thumb": "thumbnails/bigtowertinysquare.png"
   },
   {
     "name": "ovo",
-    "url": "ovo/game.html"
+    "url": "ovo/game.html",
+    "thumb": "thumbnails/ovo.png"
   },
   {
     "name": "cut the rope",
-    "url": "cuttherope/index.html"
+    "url": "cuttherope/index.html",
+    "thumb": "thumbnails/cuttherope.png"
   },
   {
     "name": "doodle jump",
-    "url": "doodle-jump/index.html"
+    "url": "doodle-jump/index.html",
+    "thumb": "thumbnails/doodle-jump.png"
   },
   {
     "name": "basket bros",
-    "url": "basketbros/index.html"
+    "url": "basketbros/index.html",
+    "thumb": "thumbnails/basketbros.jpeg"
   },
   {
     "name": "rooftop snipers",
-    "url": "rooftop-snipers/index.html"
+    "url": "rooftop-snipers/index.html",
+    "thumb": "thumbnails/rooftop-snipers.png"
   }
 ];
 
@@ -265,8 +312,20 @@ function renderGrid(list) {
   for (const g of list) {
     const btn = document.createElement("button");
     btn.className = "game";
-    btn.textContent = g.name;
     btn.onclick = () => playGame(g.url);
+
+    const img = document.createElement("img");
+    img.className = "game-thumb";
+    img.loading = "lazy";
+    img.alt = g.name;
+    img.src = g.thumb;
+    btn.appendChild(img);
+
+    const label = document.createElement("span");
+    label.className = "game-name";
+    label.textContent = g.name;
+    btn.appendChild(label);
+
     grid.appendChild(btn);
   }
 }
