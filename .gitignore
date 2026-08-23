@@ -1,3 +1,6 @@
 # Dev-only screen calibration tool — not part of the deployed site.
 calibrate.html
 calibrate.js
+
+# Game binaries — served from Cloudflare R2, not committed to git.
+riceology/games/
