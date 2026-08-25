@@ -162,7 +162,12 @@ document.addEventListener("DOMContentLoaded", () => {
   let generation = 0;
   let booted = false;
   let triggered = false;
-  let sceneZoom = ZOOM_MAX;
+  // Tracks #stage's actual current zoom (read by the wheel handler and by
+  // updateMonitorPositions() to keep the overlay layer in sync on resize).
+  // Starts at ZOOM_MIN, not ZOOM_MAX: #stage has no scale applied at all
+  // until Scene 2 runs, so this must reflect what's really on screen right
+  // now, not the value Scene 2 will eventually animate to.
+  let sceneZoom = ZOOM_MIN;
 
   // Overlay geometry at zoom = 1 (i.e. the position/size they'd have with no
   // camera push-in at all). applyOverlayZoom() scales these live against the
@@ -225,7 +230,12 @@ document.addEventListener("DOMContentLoaded", () => {
     applyAngle(topOverlay, baseRects.top);
     applyAngle(bottomOverlay, baseRects.bottom);
     refreshZoomBounds();
-    applyOverlayZoom(sceneZoom);
+    // Not just applyOverlayZoom(): refreshZoomBounds() can clamp sceneZoom
+    // down (e.g. on a resize that shrinks ZOOM_MAX), and if only the overlay
+    // re-synced to that new value while #stage's transform kept its old,
+    // larger scale, the two would visibly desync — the exact "overlay box
+    // too big for the photo" bug. applySceneZoom() re-asserts both together.
+    applySceneZoom(sceneZoom);
   }
 
   // Rescales the overlay boxes' real left/top/width/height to match the
@@ -249,16 +259,6 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     applyOne(topOverlay, baseRects.top);
     applyOne(bottomOverlay, baseRects.bottom);
-  }
-
-  // Toggles the overlay boxes' left/top/width/height transition (see
-  // .monitor-overlay in style.css) in lockstep with #stage's own transform
-  // transition, so the two either both animate together (Scene 2's push-in)
-  // or both jump instantly together (scroll-driven zoom, direct state sets).
-  function setOverlayTransitionEnabled(enabled) {
-    const value = enabled ? "" : "none";
-    topOverlay.style.transition = value;
-    bottomOverlay.style.transition = value;
   }
 
   // Computes how far scroll-in can zoom before either monitor's overlay box
@@ -307,6 +307,12 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("resize", updateMonitorPositions);
 
   // ---------- Scroll-driven whole-scene zoom + depth-of-field blur ----------
+  // The single place that writes the photo's transform AND the overlay
+  // layer's geometry — always together, in the same synchronous call, from
+  // the same zoom number. Every animation path below (Scene 2's push-in,
+  // scroll-driven zoom) ultimately just calls this repeatedly; there's no
+  // second, independently-timed animation system (e.g. a CSS transition)
+  // that could drift out of step with it.
   function applySceneZoom(zoom) {
     sceneZoom = zoom;
     stage.style.transform = `scale(${zoom})`;
@@ -318,18 +324,66 @@ document.addEventListener("DOMContentLoaded", () => {
     deskPhoto.style.filter = `blur(${MAX_DESK_BLUR * t}px)`;
   }
 
+  // Standard cubic-bezier(x1,y1,x2,y2) progress-easing evaluator (Newton-
+  // Raphson), matching the curve the CSS transition used to use — so Scene
+  // 2's push-in still has the same "fast start, gentle settle" feel.
+  function cubicBezier(x1, y1, x2, y2) {
+    const A = (a1, a2) => 1 - 3 * a2 + 3 * a1;
+    const B = (a1, a2) => 3 * a2 - 6 * a1;
+    const C = (a1) => 3 * a1;
+    const calc = (t, a1, a2) => ((A(a1, a2) * t + B(a1, a2)) * t + C(a1)) * t;
+    const slope = (t, a1, a2) => 3 * A(a1, a2) * t * t + 2 * B(a1, a2) * t + C(a1);
+    return (t) => {
+      let x = t;
+      for (let i = 0; i < 8; i++) {
+        const s = slope(x, x1, x2);
+        if (s === 0) break;
+        x -= (calc(x, x1, x2) - t) / s;
+      }
+      return calc(x, y1, y2);
+    };
+  }
+  const zoomEase = cubicBezier(0.62, 0, 0.3, 1);
+
+  // Bumped to cancel any in-flight animateZoomTo() loop — e.g. when the user
+  // scrolls mid push-in, taking manual control should win immediately
+  // rather than fighting the animation for the next several frames.
+  let zoomAnimToken = 0;
+
+  // Animates sceneZoom from its current value to `target` over `durationMs`,
+  // driving #stage's transform and the overlay layer from the same rAF loop
+  // every frame (via applySceneZoom) so they're always in lockstep by
+  // construction — there's nothing else that could pull them apart.
+  function animateZoomTo(target, durationMs, myGen) {
+    zoomAnimToken++;
+    const myToken = zoomAnimToken;
+    const startZoom = sceneZoom;
+    const startTime = performance.now();
+    return new Promise((resolve) => {
+      function frame(now) {
+        if (myGen !== generation || myToken !== zoomAnimToken) {
+          resolve(false);
+          return;
+        }
+        const t = Math.min(1, (now - startTime) / durationMs);
+        applySceneZoom(startZoom + (target - startZoom) * zoomEase(t));
+        if (t < 1) {
+          requestAnimationFrame(frame);
+        } else {
+          resolve(true);
+        }
+      }
+      requestAnimationFrame(frame);
+    });
+  }
+
   function resetToScene0() {
     generation++;
     booted = false;
     triggered = false;
-    sceneZoom = ZOOM_MAX;
+    zoomAnimToken++;
     document.body.classList.remove("booted");
-    stage.classList.remove("zoomed");
-    stage.style.transition = "";
-    stage.style.transform = "";
-    setOverlayTransitionEnabled(true);
-    applyOverlayZoom(ZOOM_MIN);
-    deskPhoto.style.filter = "blur(0px)";
+    applySceneZoom(ZOOM_MIN);
     topOverlay.classList.remove("flicker");
     bottomOverlay.classList.remove("flicker");
     bootSplashes.forEach((el) => el.classList.remove("visible"));
@@ -346,9 +400,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.classList.add("booted");
     booted = true;
     triggered = true;
-    stage.classList.add("zoomed");
-    stage.style.transition = "none";
-    setOverlayTransitionEnabled(false);
+    zoomAnimToken++;
     applySceneZoom(ZOOM_MAX);
     topOverlay.classList.remove("flicker");
     bottomOverlay.classList.remove("flicker");
@@ -377,19 +429,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (myGen !== generation) return;
     bootSplashes.forEach((el) => el.classList.remove("visible"));
 
-    // Scene 2 — camera zoom (CSS-driven push-in to the tight monitor frame).
-    // The overlay boxes' own left/top/width/height transition (see
-    // .monitor-overlay in style.css) is still enabled at this point, so
-    // this animates in sync with #stage's CSS transform transition.
-    stage.classList.add("zoomed");
-    applyOverlayZoom(ZOOM_MAX);
-    await sleep(TIMING.zoom);
-    if (myGen !== generation) return;
-    // Hand off from the CSS class transition to JS-driven inline transform
-    // at the same end value, so post-boot scroll zoom can take over smoothly.
-    stage.style.transition = "none";
-    setOverlayTransitionEnabled(false);
-    applySceneZoom(ZOOM_MAX);
+    // Scene 2 — camera zoom (rAF-driven push-in to the tight monitor frame;
+    // see animateZoomTo() — drives the photo and overlay from one shared
+    // zoom value every frame, so they can't drift apart mid-animation).
+    const completed = await animateZoomTo(ZOOM_MAX, TIMING.zoom, myGen);
+    if (!completed) return;
 
     // Scene 3 — crossfade to rendered desktop
     screenContents.forEach((el) => el.classList.add("visible"));
@@ -728,8 +772,10 @@ document.addEventListener("DOMContentLoaded", () => {
     (e) => {
       if (!booted) return;
       const next = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, sceneZoom - e.deltaY * 0.0025));
-      stage.style.transition = "none";
-      setOverlayTransitionEnabled(false);
+      // Cancels Scene 2's push-in animation if it's still in flight — a
+      // scroll mid-animation should immediately hand control to the user
+      // instead of fighting it for the animation's remaining frames.
+      zoomAnimToken++;
       applySceneZoom(next);
     },
     { passive: true }

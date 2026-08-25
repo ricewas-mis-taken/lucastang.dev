@@ -44,16 +44,18 @@ body {
 
 /* ---------- Stage: the photo + everything pinned to it ---------- */
 
+/* No CSS transition on transform, and no zoom applied via a class — the
+   camera push-in (Scene 2) and scroll-driven zoom are both driven by JS
+   (see applySceneZoom()/animateZoomTo() in boot.js), which sets this
+   element's transform AND #overlay-layer's geometry together on every
+   frame from one shared zoom number. A second, independently-timed CSS
+   transition here previously raced that JS-driven update and could visibly
+   desync from it mid-animation. */
 #stage {
   position: fixed;
   inset: 0;
   overflow: hidden;
   transform-origin: var(--cluster-cx) var(--cluster-cy);
-  transition: transform 1.4s cubic-bezier(.62,0,.3,1);
-}
-
-#stage.zoomed {
-  transform: scale(var(--zoom-scale));
 }
 
 #desk-photo {
@@ -81,17 +83,18 @@ body {
 
 /* Monitor overlay divs — left/top/width/height are set in boot.js (in real,
    unscaled px) against the photo's computed object-fit:cover render rect,
-   then rescaled by applyOverlayZoom() to track #stage's zoom level without
-   ever going through a CSS transform: scale() on this content itself. The
-   left/top/width/height transition here is what makes that rescale animate
-   smoothly during Scene 2's push-in, mirroring #stage's own transform
-   transition above. */
+   then rescaled by applyOverlayZoom() every frame to track #stage's zoom
+   level, without ever going through a CSS transform: scale() on this
+   content itself. No transition on left/top/width/height here — animateZoomTo()
+   in boot.js drives that rescale itself (rAF, same shared zoom value that
+   drives #stage's transform each frame), which is what keeps this in
+   lockstep with the photo instead of two separately-timed animations. */
 .monitor-overlay {
   position: absolute;
   overflow: hidden;
   background: #000;
   pointer-events: auto;
-  transition: opacity .25s ease, left 1.4s cubic-bezier(.62,0,.3,1), top 1.4s cubic-bezier(.62,0,.3,1), width 1.4s cubic-bezier(.62,0,.3,1), height 1.4s cubic-bezier(.62,0,.3,1);
+  transition: opacity .25s ease;
 }
 
 /* ---------- Scene 1: boot flicker ---------- */
