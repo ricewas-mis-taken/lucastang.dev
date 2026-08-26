@@ -256,6 +256,13 @@ document.addEventListener("DOMContentLoaded", () => {
       el.style.top = `${originY + (rect.top - originY) * zoom}px`;
       el.style.width = `${rect.w * zoom}px`;
       el.style.height = `${rect.h * zoom}px`;
+      // The box above grows in real px with zoom, but font-size/gap/icon
+      // rules sized off `vw` (see style.css) are relative to the *viewport*,
+      // not this box — so they stay fixed while the box grows around them,
+      // making text/icons look proportionally smaller at higher zoom. Those
+      // rules read this variable (via calc(... * var(--overlay-zoom))) so
+      // they grow at the same rate as the box instead.
+      el.style.setProperty("--overlay-zoom", zoom);
     };
     applyOne(topOverlay, baseRects.top);
     applyOne(bottomOverlay, baseRects.bottom);
