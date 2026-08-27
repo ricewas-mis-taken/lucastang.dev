@@ -34,7 +34,7 @@ function renderPost(post) {
   const paragraphsHtml = post.content.split('\n').map(p => p.trim() ? `<p>${escapeHtml(p)}</p>` : '').join('');
 
   document.getElementById('postBody').innerHTML = `
-    <img src="${post.thumbnailUrl}" alt="${escapeHtml(post.title)}" class="post-image" id="postImg" crossorigin="anonymous"/>
+    <img src="${escapeAttr(post.thumbnailUrl)}" alt="${escapeAttr(post.title)}" class="post-image" id="postImg" crossorigin="anonymous"/>
     <div class="post-header">
       <h1 class="post-title display">${escapeHtml(post.title)}</h1>
       <div class="post-meta">
@@ -50,12 +50,6 @@ function renderPost(post) {
   } else {
     syncBackgroundToImage(document.getElementById('postImg'));
   }
-}
-
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
 }
 
 function syncBackgroundToImage(img) {
