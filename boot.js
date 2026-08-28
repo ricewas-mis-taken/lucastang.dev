@@ -7,7 +7,7 @@
 const TIMING = {
   flicker: 1100,        // Scene 1 flicker duration (must match CSS .flicker animation)
   bootSplash: 1700,      // Scene 1 spinner duration
-  zoom: 1400,            // Scene 2 camera push-in (must match CSS #stage transition)
+  zoom: 1400,            // Scene 2 camera push-in duration, passed to animateZoomTo()
   crossfade: 600,        // Scene 3 photo -> rendered screen crossfade
   typeSpeed: 18,         // ms per character in the code editor
   lineDelay: 350,        // ms pause between typed lines
@@ -21,7 +21,7 @@ const CODE_LINES = [
   { html: '<span class="kw">const</span> stage = document.<span class="fn">querySelector</span>(<span class="str">"#stage"</span>);' },
   { html: '<span class="kw">function</span> <span class="fn">triggerBoot</span>() {' },
   { html: '  <span class="kw">if</span> (booted) <span class="kw">return</span>;' },
-  { html: '  stage.<span class="fn">classList</span>.add(<span class="str">"zoomed"</span>);' },
+  { html: '  <span class="kw">await</span> <span class="fn">animateZoomTo</span>(getZoomTarget, <span class="num">1400</span>);' },
   { html: '  <span class="cm">// crossfade photo into rendered UI</span>' },
   { html: '}' },
   { html: '' },
@@ -161,7 +161,12 @@ document.addEventListener("DOMContentLoaded", () => {
   // needing every await to be manually cancelled.
   let generation = 0;
   let booted = false;
-  let triggered = false;
+  // True once the boot cinematic (flicker/splash/push-in) has actually
+  // finished and Scene 3 has started — distinct from `booted`, which flips
+  // true the instant the sequence is *triggered*. The manual-zoom wheel
+  // handler gates on this too, not just `booted`, so a scroll during the
+  // cinematic doesn't fight/cancel it.
+  let sceneReady = false;
   // Tracks #stage's actual current zoom (read by the wheel handler and by
   // updateMonitorPositions() to keep the overlay layer in sync on resize).
   // Starts at ZOOM_MIN, not ZOOM_MAX: #stage has no scale applied at all
@@ -176,11 +181,30 @@ document.addEventListener("DOMContentLoaded", () => {
   // comments in index.html and style.css for why.
   const baseRects = { top: null, bottom: null };
 
+  // Cached in px, recomputed only when the viewport actually changes (here
+  // and nowhere else — --cluster-cx/--cluster-cy are static CSS, never
+  // written from JS). applyOverlayZoom() runs every animation frame and
+  // every scroll tick, so re-deriving this from getComputedStyle() there
+  // would force a style recalc dozens of times a second for no reason.
+  let clusterOriginX = 0;
+  let clusterOriginY = 0;
+  function refreshClusterOrigin(stageW, stageH) {
+    const rootStyle = getComputedStyle(document.documentElement);
+    clusterOriginX = (parseFloat(rootStyle.getPropertyValue("--cluster-cx")) / 100) * stageW;
+    clusterOriginY = (parseFloat(rootStyle.getPropertyValue("--cluster-cy")) / 100) * stageH;
+  }
+
   // ---------- Monitor screen alignment (object-fit:cover math) ----------
   function updateMonitorPositions() {
     if (!deskPhoto.naturalWidth) return;
     const stageW = stage.offsetWidth;
     const stageH = stage.offsetHeight;
+    // A resize can transiently report a 0-sized stage mid-reflow; bailing
+    // out here (rather than computing with it) avoids corrupting baseRects
+    // with garbage geometry that nothing would otherwise fix, since this is
+    // the only place that recomputes it.
+    if (!stageW || !stageH) return;
+    refreshClusterOrigin(stageW, stageH);
     const { renderX, renderY, renderW, renderH } = computeCoverRect(
       stageW,
       stageH,
@@ -245,15 +269,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // true target size instead of stretching a pre-rendered bitmap.
   function applyOverlayZoom(zoom) {
     if (!baseRects.top || !baseRects.bottom) return;
-    const stageW = stage.offsetWidth;
-    const stageH = stage.offsetHeight;
-    if (!stageW || !stageH) return;
-    const rootStyle = getComputedStyle(document.documentElement);
-    const originX = (parseFloat(rootStyle.getPropertyValue("--cluster-cx")) / 100) * stageW;
-    const originY = (parseFloat(rootStyle.getPropertyValue("--cluster-cy")) / 100) * stageH;
     const applyOne = (el, rect) => {
-      el.style.left = `${originX + (rect.left - originX) * zoom}px`;
-      el.style.top = `${originY + (rect.top - originY) * zoom}px`;
+      el.style.left = `${clusterOriginX + (rect.left - clusterOriginX) * zoom}px`;
+      el.style.top = `${clusterOriginY + (rect.top - clusterOriginY) * zoom}px`;
       el.style.width = `${rect.w * zoom}px`;
       el.style.height = `${rect.h * zoom}px`;
       // The box above grows in real px with zoom, but font-size/gap/icon
@@ -277,10 +295,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const stageH = stage.offsetHeight;
     if (!stageW || !stageH) return ZOOM_MAX_DEFAULT;
 
-    const rootStyle = getComputedStyle(document.documentElement);
-    const originX = (parseFloat(rootStyle.getPropertyValue("--cluster-cx")) / 100) * stageW;
-    const originY = (parseFloat(rootStyle.getPropertyValue("--cluster-cy")) / 100) * stageH;
-
     let maxScale = Infinity;
     const consider = (p, o, bound) => {
       if (p === o) return;
@@ -290,8 +304,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     [baseRects.top, baseRects.bottom].forEach((rect) => {
       if (!rect) return;
-      [rect.left, rect.left + rect.w].forEach((x) => consider(x, originX, stageW));
-      [rect.top, rect.top + rect.h].forEach((y) => consider(y, originY, stageH));
+      [rect.left, rect.left + rect.w].forEach((x) => consider(x, clusterOriginX, stageW));
+      [rect.top, rect.top + rect.h].forEach((y) => consider(y, clusterOriginY, stageH));
     });
 
     return Math.min(ZOOM_MAX_DEFAULT, maxScale);
@@ -357,11 +371,14 @@ document.addEventListener("DOMContentLoaded", () => {
   // rather than fighting the animation for the next several frames.
   let zoomAnimToken = 0;
 
-  // Animates sceneZoom from its current value to `target` over `durationMs`,
-  // driving #stage's transform and the overlay layer from the same rAF loop
-  // every frame (via applySceneZoom) so they're always in lockstep by
-  // construction — there's nothing else that could pull them apart.
-  function animateZoomTo(target, durationMs, myGen) {
+  // Animates sceneZoom from its current value to whatever `getTarget()`
+  // returns, over `durationMs`, driving #stage's transform and the overlay
+  // layer from the same rAF loop every frame (via applySceneZoom) so
+  // they're always in lockstep by construction. `getTarget` is a function,
+  // not a fixed number, re-read every frame: if a resize shrinks ZOOM_MAX
+  // mid-animation (refreshZoomBounds()), the next frame eases toward the
+  // new bound instead of overshooting a stale snapshot of the old one.
+  function animateZoomTo(getTarget, durationMs, myGen) {
     zoomAnimToken++;
     const myToken = zoomAnimToken;
     const startZoom = sceneZoom;
@@ -373,7 +390,7 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
         const t = Math.min(1, (now - startTime) / durationMs);
-        applySceneZoom(startZoom + (target - startZoom) * zoomEase(t));
+        applySceneZoom(startZoom + (getTarget() - startZoom) * zoomEase(t));
         if (t < 1) {
           requestAnimationFrame(frame);
         } else {
@@ -387,7 +404,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function resetToScene0() {
     generation++;
     booted = false;
-    triggered = false;
+    sceneReady = false;
     zoomAnimToken++;
     document.body.classList.remove("booted");
     applySceneZoom(ZOOM_MIN);
@@ -406,7 +423,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const myGen = generation;
     document.body.classList.add("booted");
     booted = true;
-    triggered = true;
+    sceneReady = true;
     zoomAnimToken++;
     applySceneZoom(ZOOM_MAX);
     topOverlay.classList.remove("flicker");
@@ -439,8 +456,17 @@ document.addEventListener("DOMContentLoaded", () => {
     // Scene 2 — camera zoom (rAF-driven push-in to the tight monitor frame;
     // see animateZoomTo() — drives the photo and overlay from one shared
     // zoom value every frame, so they can't drift apart mid-animation).
-    const completed = await animateZoomTo(ZOOM_MAX, TIMING.zoom, myGen);
+    // Passed as a getter (not a fixed number) so a resize that shrinks
+    // ZOOM_MAX mid-flight is picked up on the very next frame.
+    const completed = await animateZoomTo(() => ZOOM_MAX, TIMING.zoom, myGen);
     if (!completed) return;
+
+    // Only from here on is manual scroll-zoom allowed to take over (see the
+    // wheel handler below) — before this point booted is already true (so
+    // the boot can't be re-triggered) but the cinematic itself isn't done,
+    // and letting a scroll fight it mid-flicker/mid-push-in used to cancel
+    // Scene 2 and permanently strand the page with the screens still off.
+    sceneReady = true;
 
     // Scene 3 — crossfade to rendered desktop
     screenContents.forEach((el) => el.classList.add("visible"));
@@ -777,11 +803,13 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener(
     "wheel",
     (e) => {
-      if (!booted) return;
+      // Gated on sceneReady, not just booted: booted flips true the instant
+      // the boot is triggered, before the flicker/splash/push-in cinematic
+      // has actually played — a scroll landing during that window used to
+      // cancel Scene 2's animation and permanently strand the page with the
+      // monitors still off. sceneReady only flips true once that's done.
+      if (!booted || !sceneReady) return;
       const next = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, sceneZoom - e.deltaY * 0.0025));
-      // Cancels Scene 2's push-in animation if it's still in flight — a
-      // scroll mid-animation should immediately hand control to the user
-      // instead of fighting it for the animation's remaining frames.
       zoomAnimToken++;
       applySceneZoom(next);
     },
@@ -802,8 +830,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const fireOnce = (e) => {
-    if (triggered) return;
-    triggered = true;
+    if (booted) return;
     e.preventDefault();
     triggerBoot();
   };

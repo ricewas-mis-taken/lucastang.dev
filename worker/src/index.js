@@ -4,16 +4,37 @@ const CACHE_TTL_SECONDS = 900; // 15 min
 
 // Leaderboard entries live as a JSON file committed to a dedicated data-only
 // branch of this same repo (not `main`, so a score submission never
-// triggers a Pages rebuild and never pollutes real commit history), read
-// back via GitHub's raw CDN. Reuses GITHUB_TOKEN — the `public_repo` scope
-// it already has for the commit/star widget includes write access to code
-// on public repos, so no new secret or Cloudflare resource is needed.
+// triggers a Pages rebuild and never pollutes real commit history). Both
+// reads and writes go through GitHub's Contents API (not the raw CDN, which
+// caches for several minutes and could show a stale list right after a
+// write). Reuses GITHUB_TOKEN — the `public_repo` scope it already has for
+// the commit/star widget includes write access to code on public repos, so
+// no new secret or Cloudflare resource is needed.
 const LEADERBOARD_BRANCH = "leaderboard-data";
 const LEADERBOARD_PATH = "leaderboard.json";
-const LEADERBOARD_RAW_URL = `https://raw.githubusercontent.com/${REPO}/${LEADERBOARD_BRANCH}/${LEADERBOARD_PATH}`;
 const LEADERBOARD_CONTENTS_URL = `https://api.github.com/repos/${REPO}/contents/${LEADERBOARD_PATH}`;
 const LEADERBOARD_MAX_ENTRIES = 100;
 const LEADERBOARD_NAME_MAX = 5;
+// Retries a PUT that lost a sha race against a concurrent submission (see
+// handleLeaderboardPost) instead of dropping the score.
+const LEADERBOARD_MAX_ATTEMPTS = 3;
+
+function githubHeaders(token) {
+  return {
+    Authorization: `Bearer ${token}`,
+    "User-Agent": "lucastang-dev-worker",
+    Accept: "application/vnd.github+json",
+  };
+}
+
+// Existing entries are trusted less than the one being submitted right now
+// (which handleLeaderboardPost already validates): the stored file could in
+// principle be hand-edited or corrupted, and a non-numeric score would make
+// the sort comparator return NaN and silently scramble every ranking.
+function sanitizeEntries(entries) {
+  if (!Array.isArray(entries)) return [];
+  return entries.filter((e) => e && typeof e.name === "string" && Number.isFinite(e.score));
+}
 
 function utf8ToBase64(str) {
   return btoa(unescape(encodeURIComponent(str)));
@@ -115,9 +136,11 @@ async function handleGithub(request, env, ctx) {
   return response;
 }
 
-async function handleLeaderboardGet() {
+async function handleLeaderboardGet(env) {
   try {
-    const res = await fetch(LEADERBOARD_RAW_URL);
+    const res = await fetch(`${LEADERBOARD_CONTENTS_URL}?ref=${LEADERBOARD_BRANCH}`, {
+      headers: githubHeaders(env.GITHUB_TOKEN),
+    });
     if (res.status === 404) {
       // Branch/file not created yet — the client falls back to its own
       // seed rows on an empty list, same as any other empty leaderboard.
@@ -126,9 +149,10 @@ async function handleLeaderboardGet() {
         headers: { "Content-Type": "application/json", ...corsHeaders() },
       });
     }
-    if (!res.ok) throw new Error(`raw fetch ${res.status}`);
-    const entries = await res.json();
-    return new Response(JSON.stringify(Array.isArray(entries) ? entries : []), {
+    if (!res.ok) throw new Error(`contents fetch ${res.status}`);
+    const file = await res.json();
+    const entries = sanitizeEntries(JSON.parse(base64ToUtf8(file.content)));
+    return new Response(JSON.stringify(entries), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders() },
     });
@@ -160,40 +184,46 @@ async function handleLeaderboardPost(request, env) {
     });
   }
 
-  const githubHeaders = {
-    Authorization: `Bearer ${env.GITHUB_TOKEN}`,
-    "User-Agent": "lucastang-dev-worker",
-    Accept: "application/vnd.github+json",
-  };
+  const headers = githubHeaders(env.GITHUB_TOKEN);
 
   let trimmed;
   try {
-    let entries = [];
-    let sha;
-    const getRes = await fetch(`${LEADERBOARD_CONTENTS_URL}?ref=${LEADERBOARD_BRANCH}`, { headers: githubHeaders });
-    if (getRes.ok) {
-      const file = await getRes.json();
-      sha = file.sha;
-      entries = JSON.parse(base64ToUtf8(file.content));
-    } else if (getRes.status !== 404) {
-      throw new Error(`github get ${getRes.status}`);
+    // Retries on a 409 (another submission's PUT landed first and moved the
+    // sha out from under us) by re-fetching the now-current sha/entries and
+    // re-attempting, instead of failing the request and silently dropping
+    // this score.
+    let putRes;
+    for (let attempt = 0; attempt < LEADERBOARD_MAX_ATTEMPTS; attempt++) {
+      let entries = [];
+      let sha;
+      const getRes = await fetch(`${LEADERBOARD_CONTENTS_URL}?ref=${LEADERBOARD_BRANCH}`, { headers });
+      if (getRes.ok) {
+        const file = await getRes.json();
+        sha = file.sha;
+        entries = sanitizeEntries(JSON.parse(base64ToUtf8(file.content)));
+      } else if (getRes.status !== 404) {
+        throw new Error(`github get ${getRes.status}`);
+      }
+
+      entries.push({ name, score });
+      entries.sort((a, b) => b.score - a.score);
+      trimmed = entries.slice(0, LEADERBOARD_MAX_ENTRIES);
+
+      putRes = await fetch(LEADERBOARD_CONTENTS_URL, {
+        method: "PUT",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: `leaderboard: add ${name} (${score})`,
+          content: utf8ToBase64(JSON.stringify(trimmed, null, 2)),
+          branch: LEADERBOARD_BRANCH,
+          ...(sha ? { sha } : {}),
+        }),
+      });
+      if (putRes.ok) break;
+      if (putRes.status !== 409 || attempt === LEADERBOARD_MAX_ATTEMPTS - 1) {
+        throw new Error(`github put ${putRes.status}`);
+      }
     }
-
-    entries.push({ name, score });
-    entries.sort((a, b) => b.score - a.score);
-    trimmed = entries.slice(0, LEADERBOARD_MAX_ENTRIES);
-
-    const putRes = await fetch(LEADERBOARD_CONTENTS_URL, {
-      method: "PUT",
-      headers: { ...githubHeaders, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: `leaderboard: add ${name} (${score})`,
-        content: utf8ToBase64(JSON.stringify(trimmed, null, 2)),
-        branch: LEADERBOARD_BRANCH,
-        ...(sha ? { sha } : {}),
-      }),
-    });
-    if (!putRes.ok) throw new Error(`github put ${putRes.status}`);
   } catch (e) {
     return new Response(JSON.stringify({ error: "leaderboard_unavailable" }), {
       status: 503,
@@ -220,7 +250,7 @@ export default {
     }
 
     if (url.pathname === "/api/leaderboard" && request.method === "GET") {
-      return handleLeaderboardGet();
+      return handleLeaderboardGet(env);
     }
 
     if (url.pathname === "/api/leaderboard" && request.method === "POST") {

@@ -23,10 +23,10 @@ function renderPosts() {
 
     card.innerHTML = `
       <div class="blog-thumbnail">
-        <img src="${post.thumbnailUrl}" alt="${post.title}"/>
+        <img src="${escapeAttr(post.thumbnailUrl)}" alt="${escapeAttr(post.title)}"/>
       </div>
       <div class="blog-content">
-        <div class="blog-title">${post.title}</div>
+        <div class="blog-title">${escapeHtml(post.title)}</div>
         <div class="blog-date">${formattedDate}</div>
       </div>
     `;
