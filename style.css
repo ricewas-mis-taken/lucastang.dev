@@ -133,29 +133,29 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: calc(var(--overlay-zoom, 1) * 4px);
-  width: calc(var(--overlay-zoom, 1) * 70px);
+  gap: calc(var(--overlay-zoom, 1) * 5px);
+  width: calc(var(--overlay-zoom, 1) * 88px);
   color: var(--ink);
 }
 
 .boot-runner-track {
   position: relative;
   width: 100%;
-  height: calc(var(--overlay-zoom, 1) * 16px);
+  height: calc(var(--overlay-zoom, 1) * 24px);
 }
 
 .boot-runner {
   position: absolute;
   top: 0;
   left: 0;
-  width: calc(var(--overlay-zoom, 1) * 16px);
-  height: calc(var(--overlay-zoom, 1) * 16px);
+  width: calc(var(--overlay-zoom, 1) * 24px);
+  height: calc(var(--overlay-zoom, 1) * 24px);
   animation: bootRunnerMove 1.1s linear infinite, bootRunnerStride .275s ease-in-out infinite alternate;
 }
 
 @keyframes bootRunnerMove {
   0%   { left: 0; }
-  100% { left: calc(var(--overlay-zoom, 1) * 54px); }
+  100% { left: calc(var(--overlay-zoom, 1) * 64px); }
 }
 
 @keyframes bootRunnerStride {
@@ -166,7 +166,7 @@ body {
 .boot-bar {
   position: relative;
   width: 100%;
-  height: calc(var(--overlay-zoom, 1) * 11px);
+  height: calc(var(--overlay-zoom, 1) * 13px);
   border: calc(var(--overlay-zoom, 1) * 1.5px) solid var(--ink);
   border-radius: 999px;
   overflow: hidden;

@@ -442,30 +442,34 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function runSequence(myGen) {
-    // Scene 1 — boot flicker + splash
+    // Scene 1 — boot flicker
     topOverlay.classList.add("flicker");
     bottomOverlay.classList.add("flicker");
     await sleep(TIMING.flicker);
     if (myGen !== generation) return;
 
+    // Scene 2 — camera zoom (rAF-driven push-in to the tight monitor frame;
+    // see animateZoomTo() — drives the photo and overlay from one shared
+    // zoom value every frame, so they can't drift apart mid-animation).
+    // Passed as a getter (not a fixed number) so a resize that shrinks
+    // ZOOM_MAX mid-flight is picked up on the very next frame. Runs before
+    // the loading splash so the push-in reads as walking up to the machine,
+    // and the loading bar plays once already framed tight on it.
+    const completed = await animateZoomTo(() => ZOOM_MAX, TIMING.zoom, myGen);
+    if (!completed) return;
+
+    // Scene 1b — loading splash, now shown at the tight zoomed-in frame
     bootSplashes.forEach((el) => el.classList.add("visible"));
     await sleep(TIMING.bootSplash);
     if (myGen !== generation) return;
     bootSplashes.forEach((el) => el.classList.remove("visible"));
 
-    // Scene 2 — camera zoom (rAF-driven push-in to the tight monitor frame;
-    // see animateZoomTo() — drives the photo and overlay from one shared
-    // zoom value every frame, so they can't drift apart mid-animation).
-    // Passed as a getter (not a fixed number) so a resize that shrinks
-    // ZOOM_MAX mid-flight is picked up on the very next frame.
-    const completed = await animateZoomTo(() => ZOOM_MAX, TIMING.zoom, myGen);
-    if (!completed) return;
-
     // Only from here on is manual scroll-zoom allowed to take over (see the
     // wheel handler below) — before this point booted is already true (so
     // the boot can't be re-triggered) but the cinematic itself isn't done,
-    // and letting a scroll fight it mid-flicker/mid-push-in used to cancel
-    // Scene 2 and permanently strand the page with the screens still off.
+    // and letting a scroll fight it mid-flicker/mid-push-in/mid-splash used
+    // to cancel Scene 2 and permanently strand the page with the screens
+    // still off.
     sceneReady = true;
 
     // Scene 3 — crossfade to rendered desktop
