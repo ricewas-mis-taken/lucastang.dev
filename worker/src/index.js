@@ -83,6 +83,7 @@ function sanitizeAnalytics(raw) {
       };
     }
   }
+  if (typeof raw.lastUpdated === "string") clean.lastUpdated = raw.lastUpdated;
   return clean;
 }
 
