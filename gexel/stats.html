@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>gexel stats</title>
+<meta content="noindex" name="robots"/>
+<link href="/favicon.ico" rel="icon"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<style>
+:root { --bg: #000000; --ink: #ffffff; --muted: #999999; --accent: #2ea84a; }
+@font-face {
+  font-family: 'PokemonClassic';
+  src: url('/gexel-game/fonts/PokemonClassic.ttf') format('truetype');
+  font-display: swap;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: "Inter", system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 3rem 1.5rem; }
+h1 { font-family: 'PokemonClassic', monospace; font-size: 1.4rem; letter-spacing: 4px; text-shadow: 0 0 10px #2ea84a88; margin-bottom: 0.4rem; text-align: center; }
+.subtitle { color: var(--muted); font-size: 0.85rem; margin-bottom: 2.5rem; text-align: center; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; width: 100%; max-width: 900px; margin-bottom: 2.5rem; }
+.card { background: #0c0c0c; border: 1px solid #222; border-radius: 6px; padding: 1.1rem 1.3rem; }
+.card .value { font-family: 'PokemonClassic', monospace; font-size: 1.6rem; color: var(--accent); }
+.card .label { color: var(--muted); font-size: 0.72rem; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 0.3rem; }
+table { width: 100%; max-width: 900px; border-collapse: collapse; font-family: 'PokemonClassic', monospace; font-size: 0.75rem; }
+th { text-align: left; color: var(--muted); font-weight: normal; letter-spacing: 2px; font-size: 0.65rem; padding: 4px 10px 10px; }
+td { padding: 6px 10px; letter-spacing: 1px; }
+th:last-child, td:last-child { text-align: right; }
+tbody tr:nth-child(odd) { background: rgba(255,255,255,0.04); }
+.state { color: var(--muted); font-size: 0.85rem; margin-top: 2rem; }
+.updated { color: var(--muted); font-size: 0.75rem; margin-top: 2.5rem; }
+</style>
+</head>
+<body>
+<h1>GEXEL — USAGE STATS</h1>
+<p class="subtitle">private link — not linked from the site</p>
+<div id="cards" class="grid"></div>
+<table>
+<thead><tr><th>GAME</th><th>STARTS</th><th>COMPLETIONS</th></tr></thead>
+<tbody id="per-game"></tbody>
+</table>
+<p id="state" class="state"></p>
+<p id="updated" class="updated"></p>
+<script>
+const ANALYTICS_API_URL = "https://lucastang-dev-api.lucastang.workers.dev/api/analytics";
+const GAME_LABELS = { pacman: "PAC-MAN", galaga: "GALAGA", frogger: "FROGGER", roadgame: "SEGA TURBO", tetris: "TETRIS" };
+
+function fmtDuration(totalSeconds) {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+function card(value, label) {
+  const div = document.createElement("div");
+  div.className = "card";
+  div.innerHTML = `<div class="value">${value}</div><div class="label">${label}</div>`;
+  return div;
+}
+
+async function load() {
+  const stateEl = document.getElementById("state");
+  try {
+    const res = await fetch(ANALYTICS_API_URL);
+    if (!res.ok) throw new Error(`bad status ${res.status}`);
+    const stats = await res.json();
+
+    const cards = document.getElementById("cards");
+    cards.appendChild(card(stats.uniqueVisitorCount ?? 0, "Unique Visitors"));
+    cards.appendChild(card(stats.totalSessions ?? 0, "Total Sessions"));
+    cards.appendChild(card(fmtDuration(stats.totalPlaySeconds ?? 0), "Total Playtime"));
+    cards.appendChild(card(stats.arcadeEntries ?? 0, "Found the Easter Egg"));
+    cards.appendChild(card(stats.bossWins ?? 0, "Boss Fights Won"));
+    cards.appendChild(card(stats.competeRuns ?? 0, "Compete Runs"));
+
+    const perGameBody = document.getElementById("per-game");
+    for (const [key, label] of Object.entries(GAME_LABELS)) {
+      const g = stats.perGame?.[key] || { starts: 0, completions: 0 };
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${label}</td><td>${g.starts}</td><td>${g.completions}</td>`;
+      perGameBody.appendChild(tr);
+    }
+
+    if (stats.lastUpdated) {
+      document.getElementById("updated").textContent = `last beacon received: ${new Date(stats.lastUpdated).toLocaleString()}`;
+    }
+  } catch (e) {
+    stateEl.textContent = "Stats unavailable — worker offline or no data recorded yet.";
+  }
+}
+
+load();
+</script>
+</body>
+</html>
