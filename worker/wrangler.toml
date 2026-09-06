@@ -30,3 +30,12 @@ compatibility_date = "2026-08-09"
 #   echo "[]" > leaderboard.json
 #   git add leaderboard.json && git commit -m "chore: init leaderboard data branch"
 #   git push -u origin leaderboard-data
+
+# /api/analytics follows the same pattern, storing aggregate usage counters
+# in analytics.json on its own "analytics-data" branch (see ANALYTICS_*
+# constants in src/index.js). Needs the same one-time branch setup:
+#   git checkout --orphan analytics-data
+#   git rm -rf .
+#   echo "{}" > analytics.json
+#   git add analytics.json && git commit -m "chore: init analytics data branch"
+#   git push -u origin analytics-data
