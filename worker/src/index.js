@@ -19,6 +19,196 @@ const LEADERBOARD_NAME_MAX = 5;
 // handleLeaderboardPost) instead of dropping the score.
 const LEADERBOARD_MAX_ATTEMPTS = 3;
 
+// Same storage pattern as the leaderboard: one JSON file on a dedicated
+// data branch, read-modify-write via GitHub Contents API. Unlike the
+// leaderboard, this file holds running *aggregate counters*, not an
+// append-only log — the client (src/lib/analytics.js in excel-jam) batches
+// its own events into deltas (one beacon per visibility-hidden/pagehide,
+// plus a 60s heartbeat while a tab stays open) and this endpoint just adds
+// each delta onto the totals. That keeps the file a fixed handful of
+// fields forever regardless of traffic, instead of growing one row per
+// session the way a raw event log would.
+const ANALYTICS_BRANCH = "analytics-data";
+const ANALYTICS_PATH = "analytics.json";
+const ANALYTICS_CONTENTS_URL = `https://api.github.com/repos/${REPO}/contents/${ANALYTICS_PATH}`;
+const ANALYTICS_MAX_ATTEMPTS = 3;
+const ANALYTICS_GAME_KEYS = ["pacman", "galaga", "frogger", "roadgame", "tetris"];
+// Clamp any single delta so one misbehaving/replayed beacon can't blow the
+// totals out — a real heartbeat never exceeds HEARTBEAT_MS (60s) plus some
+// slack for a backgrounded tab's timer being throttled.
+const ANALYTICS_MAX_PLAY_SECONDS_PER_BEAT = 1800;
+const ANALYTICS_MAX_COUNT_PER_BEAT = 20;
+// Caps how many unique visitor ids we'll remember for the unique-player
+// count. At jam scale this is generous headroom; if it's ever hit, unique
+// visitors becomes an undercount (new ids stop being added) rather than
+// the file growing without bound.
+const ANALYTICS_MAX_VISITORS = 20000;
+
+function emptyAnalytics() {
+  const perGame = {};
+  for (const key of ANALYTICS_GAME_KEYS) perGame[key] = { starts: 0, completions: 0 };
+  return {
+    totalSessions: 0,
+    totalPlaySeconds: 0,
+    uniqueVisitors: [],
+    arcadeEntries: 0,
+    bossWins: 0,
+    competeRuns: 0,
+    perGame,
+    lastUpdated: null,
+  };
+}
+
+// Trusts a freshly-fetched stored file about as little as the leaderboard
+// does: a hand-edited or corrupted file shouldn't crash the endpoint or
+// let NaN/garbage poison every future total.
+function sanitizeAnalytics(raw) {
+  const base = emptyAnalytics();
+  if (!raw || typeof raw !== "object") return base;
+  const clean = { ...base };
+  if (Number.isFinite(raw.totalSessions)) clean.totalSessions = Math.max(0, Math.floor(raw.totalSessions));
+  if (Number.isFinite(raw.totalPlaySeconds)) clean.totalPlaySeconds = Math.max(0, Math.floor(raw.totalPlaySeconds));
+  if (Number.isFinite(raw.arcadeEntries)) clean.arcadeEntries = Math.max(0, Math.floor(raw.arcadeEntries));
+  if (Number.isFinite(raw.bossWins)) clean.bossWins = Math.max(0, Math.floor(raw.bossWins));
+  if (Number.isFinite(raw.competeRuns)) clean.competeRuns = Math.max(0, Math.floor(raw.competeRuns));
+  if (Array.isArray(raw.uniqueVisitors)) {
+    clean.uniqueVisitors = raw.uniqueVisitors.filter((id) => typeof id === "string").slice(0, ANALYTICS_MAX_VISITORS);
+  }
+  if (raw.perGame && typeof raw.perGame === "object") {
+    for (const key of ANALYTICS_GAME_KEYS) {
+      const g = raw.perGame[key];
+      clean.perGame[key] = {
+        starts: g && Number.isFinite(g.starts) ? Math.max(0, Math.floor(g.starts)) : 0,
+        completions: g && Number.isFinite(g.completions) ? Math.max(0, Math.floor(g.completions)) : 0,
+      };
+    }
+  }
+  if (typeof raw.lastUpdated === "string") clean.lastUpdated = raw.lastUpdated;
+  return clean;
+}
+
+function clampCount(n) {
+  return Math.max(0, Math.min(ANALYTICS_MAX_COUNT_PER_BEAT, Math.floor(Number(n) || 0)));
+}
+
+// Applies one client beacon's delta onto the stored totals in place.
+function applyAnalyticsDelta(stats, body, visitorId) {
+  const playSeconds = Math.max(0, Math.min(ANALYTICS_MAX_PLAY_SECONDS_PER_BEAT, Math.floor(Number(body.playSecondsDelta) || 0)));
+  stats.totalPlaySeconds += playSeconds;
+
+  if (body.sessionNew) stats.totalSessions += 1;
+
+  if (visitorId && stats.uniqueVisitors.length < ANALYTICS_MAX_VISITORS && !stats.uniqueVisitors.includes(visitorId)) {
+    stats.uniqueVisitors.push(visitorId);
+  }
+
+  stats.arcadeEntries += clampCount(body.arcadeEnteredDelta);
+  stats.bossWins += clampCount(body.bossWinsDelta);
+  stats.competeRuns += clampCount(body.competeRunsDelta);
+
+  if (body.gameStarts && typeof body.gameStarts === "object") {
+    for (const key of ANALYTICS_GAME_KEYS) {
+      if (body.gameStarts[key] != null) stats.perGame[key].starts += clampCount(body.gameStarts[key]);
+    }
+  }
+  if (body.gameCompletions && typeof body.gameCompletions === "object") {
+    for (const key of ANALYTICS_GAME_KEYS) {
+      if (body.gameCompletions[key] != null) stats.perGame[key].completions += clampCount(body.gameCompletions[key]);
+    }
+  }
+
+  stats.lastUpdated = new Date().toISOString();
+  return stats;
+}
+
+async function handleAnalyticsGet(env) {
+  try {
+    const res = await fetch(`${ANALYTICS_CONTENTS_URL}?ref=${ANALYTICS_BRANCH}`, {
+      headers: githubHeaders(env.GITHUB_TOKEN),
+    });
+    if (res.status === 404) {
+      return new Response(JSON.stringify(emptyAnalytics()), {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders() },
+      });
+    }
+    if (!res.ok) throw new Error(`contents fetch ${res.status}`);
+    const file = await res.json();
+    const stats = sanitizeAnalytics(JSON.parse(base64ToUtf8(file.content)));
+    // uniqueVisitors is an internal implementation detail (raw ids), not
+    // something the public stats page needs — expose only its count.
+    const { uniqueVisitors, ...publicStats } = stats;
+    return new Response(JSON.stringify({ ...publicStats, uniqueVisitorCount: uniqueVisitors.length }), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "public, max-age=30",
+        ...corsHeaders(),
+      },
+    });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: "analytics_unavailable" }), {
+      status: 503,
+      headers: { "Content-Type": "application/json", ...corsHeaders() },
+    });
+  }
+}
+
+async function handleAnalyticsPost(request, env) {
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    // sendBeacon can't set a Content-Type reliably in every browser, so a
+    // malformed/empty body is expected background noise, not an error
+    // worth surfacing — just drop the beat.
+    return new Response(null, { status: 204, headers: corsHeaders() });
+  }
+
+  const visitorId = typeof body?.visitorId === "string" ? body.visitorId.slice(0, 100) : null;
+  const headers = githubHeaders(env.GITHUB_TOKEN);
+
+  try {
+    let putRes;
+    for (let attempt = 0; attempt < ANALYTICS_MAX_ATTEMPTS; attempt++) {
+      let stats = emptyAnalytics();
+      let sha;
+      const getRes = await fetch(`${ANALYTICS_CONTENTS_URL}?ref=${ANALYTICS_BRANCH}`, { headers });
+      if (getRes.ok) {
+        const file = await getRes.json();
+        sha = file.sha;
+        stats = sanitizeAnalytics(JSON.parse(base64ToUtf8(file.content)));
+      } else if (getRes.status !== 404) {
+        throw new Error(`github get ${getRes.status}`);
+      }
+
+      applyAnalyticsDelta(stats, body, visitorId);
+
+      putRes = await fetch(ANALYTICS_CONTENTS_URL, {
+        method: "PUT",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: "analytics: record usage beat",
+          content: utf8ToBase64(JSON.stringify(stats, null, 2)),
+          branch: ANALYTICS_BRANCH,
+          ...(sha ? { sha } : {}),
+        }),
+      });
+      if (putRes.ok) break;
+      if (putRes.status !== 409 || attempt === ANALYTICS_MAX_ATTEMPTS - 1) {
+        throw new Error(`github put ${putRes.status}`);
+      }
+    }
+  } catch (e) {
+    // Fire-and-forget from the client's perspective (sendBeacon has no
+    // response callback), so there's no retry benefit to a non-204 here —
+    // but keep the real status for direct/manual POSTs and server logs.
+    return new Response(null, { status: 503, headers: corsHeaders() });
+  }
+
+  return new Response(null, { status: 204, headers: corsHeaders() });
+}
+
 function githubHeaders(token) {
   return {
     Authorization: `Bearer ${token}`,
@@ -255,6 +445,14 @@ export default {
 
     if (url.pathname === "/api/leaderboard" && request.method === "POST") {
       return handleLeaderboardPost(request, env);
+    }
+
+    if (url.pathname === "/api/analytics" && request.method === "GET") {
+      return handleAnalyticsGet(env);
+    }
+
+    if (url.pathname === "/api/analytics" && request.method === "POST") {
+      return handleAnalyticsPost(request, env);
     }
 
     return new Response("Not found", { status: 404, headers: corsHeaders() });
