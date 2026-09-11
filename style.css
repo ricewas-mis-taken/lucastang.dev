@@ -1,18 +1,4 @@
-/* ==========================================================================
-   lucastang.dev — animated boot/desktop intro
-   Monitor screen fractions (of assets/desk-photo.png, 1448x1086, re-measured
-   via edge detection against the bezels) live in boot.js as SCREENS — the
-   overlay divs are positioned in JS against the photo's actual object-fit:
-   cover render rect, not fixed CSS %, so alignment holds at any viewport
-   aspect ratio. See computeCoverRect()/updateMonitorPositions() in boot.js.
 
-   #stage's scroll-driven zoom scales the desk photo via CSS transform, but
-   #overlay-layer (the monitor screens' text/UI) deliberately sits OUTSIDE
-   that scaled subtree and is repositioned in real px by applyOverlayZoom()
-   in boot.js instead — so the screens' content is always laid out and
-   painted natively at its true on-screen size, not a stretched bitmap,
-   which is what made it look blurry at higher zoom.
-   ========================================================================== */
 
 :root {
   --bg: #000000;
