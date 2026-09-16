@@ -7,7 +7,12 @@
   --orange: #f97316;
   --accent: #7f5af0;
 
-  /* Center of the whole monitor cluster, used as the zoom transform-origin */
+  /* Center of the whole monitor cluster, used as the zoom transform-origin.
+     Initial values only, tuned for a landscape desktop viewport — boot.js's
+     updateMonitorPositions() overwrites both immediately once it knows the
+     real viewport size and where the monitors actually rendered, so this
+     stays correct (instead of zooming toward the wrong spot) at any aspect
+     ratio, portrait phones included. */
   --cluster-cx: 43.38%;
   --cluster-cy: 53.27%;
 
