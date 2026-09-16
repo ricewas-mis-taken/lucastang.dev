@@ -182,17 +182,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const baseRects = { top: null, bottom: null };
 
   // Cached in px, recomputed only when the viewport actually changes (here
-  // and nowhere else — --cluster-cx/--cluster-cy are static CSS, never
-  // written from JS). applyOverlayZoom() runs every animation frame and
-  // every scroll tick, so re-deriving this from getComputedStyle() there
-  // would force a style recalc dozens of times a second for no reason.
+  // and nowhere else). applyOverlayZoom() runs every animation frame and
+  // every scroll tick, so re-deriving this on every call would be wasted
+  // work. Computed from the monitors' own rendered bounding box (below),
+  // not a fixed CSS %: a fixed percentage was tuned for one specific
+  // viewport aspect ratio, and object-fit:cover crops the photo completely
+  // differently at other aspect ratios — most drastically on a narrow
+  // portrait phone, where a fixed origin ends up zooming toward whatever
+  // random point of the photo used to be under it on desktop, instead of
+  // toward the screens. Deriving it from where the monitors actually
+  // rendered keeps the push-in centered on them at any viewport shape.
   let clusterOriginX = 0;
   let clusterOriginY = 0;
-  function refreshClusterOrigin(stageW, stageH) {
-    const rootStyle = getComputedStyle(document.documentElement);
-    clusterOriginX = (parseFloat(rootStyle.getPropertyValue("--cluster-cx")) / 100) * stageW;
-    clusterOriginY = (parseFloat(rootStyle.getPropertyValue("--cluster-cy")) / 100) * stageH;
-  }
 
   // ---------- Monitor screen alignment (object-fit:cover math) ----------
   function updateMonitorPositions() {
@@ -204,7 +205,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // with garbage geometry that nothing would otherwise fix, since this is
     // the only place that recomputes it.
     if (!stageW || !stageH) return;
-    refreshClusterOrigin(stageW, stageH);
     const { renderX, renderY, renderW, renderH } = computeCoverRect(
       stageW,
       stageH,
@@ -242,6 +242,22 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     baseRects.top = place(SCREENS.top, { rotateDeg: TOP_TILT_DEG, keystoneDeg: TOP_KEYSTONE_DEG });
     baseRects.bottom = place(SCREENS.bottom, { rotateDeg: BOTTOM_TILT_DEG, keystoneDeg: BOTTOM_KEYSTONE_DEG });
+
+    // Zoom transform-origin = center of the union bounding box of both
+    // monitors' rendered rects (see the comment on clusterOriginX above).
+    // Written to --cluster-cx/--cluster-cy too, since #stage's own CSS
+    // transform-origin (which scales the desk photo) needs to land on the
+    // same point for the photo and the overlay to zoom toward each other
+    // consistently.
+    const unionLeft = Math.min(baseRects.top.left, baseRects.bottom.left);
+    const unionRight = Math.max(baseRects.top.left + baseRects.top.w, baseRects.bottom.left + baseRects.bottom.w);
+    const unionTop = Math.min(baseRects.top.top, baseRects.bottom.top);
+    const unionBottom = Math.max(baseRects.top.top + baseRects.top.h, baseRects.bottom.top + baseRects.bottom.h);
+    clusterOriginX = (unionLeft + unionRight) / 2;
+    clusterOriginY = (unionTop + unionBottom) / 2;
+    document.documentElement.style.setProperty("--cluster-cx", `${(clusterOriginX / stageW) * 100}%`);
+    document.documentElement.style.setProperty("--cluster-cy", `${(clusterOriginY / stageH) * 100}%`);
+
     // Keystone/rotate are angle-only, independent of zoom scale, so they can
     // be applied to the element once here rather than on every zoom tick.
     const applyAngle = (el, rect) => {
@@ -803,20 +819,25 @@ document.addEventListener("DOMContentLoaded", () => {
     loadTrack(0, true);
   }
 
-  // ---------- Post-boot: scroll wheel zooms/pulls back the whole scene ----------
+  // ---------- Post-boot: scroll wheel / touch-drag zoom/pull back the scene ----------
+  // Shared by the wheel handler and the touch-drag handler further down —
+  // both just mean "change the zoom by roughly this much," in whatever unit
+  // that input device naturally gives.
+  function nudgeZoom(deltaZoom) {
+    // Gated on sceneReady, not just booted: booted flips true the instant
+    // the boot is triggered, before the flicker/splash/push-in cinematic
+    // has actually played — a scroll landing during that window used to
+    // cancel Scene 2's animation and permanently strand the page with the
+    // monitors still off. sceneReady only flips true once that's done.
+    if (!booted || !sceneReady) return;
+    const next = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, sceneZoom + deltaZoom));
+    zoomAnimToken++;
+    applySceneZoom(next);
+  }
+
   window.addEventListener(
     "wheel",
-    (e) => {
-      // Gated on sceneReady, not just booted: booted flips true the instant
-      // the boot is triggered, before the flicker/splash/push-in cinematic
-      // has actually played — a scroll landing during that window used to
-      // cancel Scene 2's animation and permanently strand the page with the
-      // monitors still off. sceneReady only flips true once that's done.
-      if (!booted || !sceneReady) return;
-      const next = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, sceneZoom - e.deltaY * 0.0025));
-      zoomAnimToken++;
-      applySceneZoom(next);
-    },
+    (e) => nudgeZoom(-e.deltaY * 0.0025),
     { passive: true }
   );
 
@@ -840,12 +861,40 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.addEventListener("wheel", fireOnce, { passive: false });
+
+  // Touch devices never fire "wheel" at all, so without this a phone could
+  // trigger the boot (via fireOnce, below) but then had no way to zoom in
+  // on the monitors afterward — every touchmove after boot hit fireOnce's
+  // own `if (booted) return;` and did nothing. A single-finger vertical
+  // drag now drives nudgeZoom() the same way a scroll wheel does: dragging
+  // up (finger moves up, the natural "scroll down" gesture) zooms in, the
+  // same sign convention as a positive wheel deltaY.
+  const TOUCH_ZOOM_SCALE = 0.006;
+  let touchZoomY = null;
+
+  window.addEventListener(
+    "touchstart",
+    (e) => {
+      touchZoomY = e.touches.length === 1 ? e.touches[0].clientY : null;
+    },
+    { passive: true }
+  );
+
   window.addEventListener(
     "touchmove",
     (e) => {
       e.preventDefault();
-      fireOnce(e);
+      if (!booted) {
+        fireOnce(e);
+        return;
+      }
+      if (e.touches.length !== 1) return;
+      const y = e.touches[0].clientY;
+      if (touchZoomY !== null) nudgeZoom((touchZoomY - y) * TOUCH_ZOOM_SCALE);
+      touchZoomY = y;
     },
     { passive: false }
   );
+
+  window.addEventListener("touchend", () => { touchZoomY = null; });
 });
