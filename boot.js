@@ -819,20 +819,25 @@ document.addEventListener("DOMContentLoaded", () => {
     loadTrack(0, true);
   }
 
-  // ---------- Post-boot: scroll wheel zooms/pulls back the whole scene ----------
+  // ---------- Post-boot: scroll wheel / touch-drag zoom/pull back the scene ----------
+  // Shared by the wheel handler and the touch-drag handler further down —
+  // both just mean "change the zoom by roughly this much," in whatever unit
+  // that input device naturally gives.
+  function nudgeZoom(deltaZoom) {
+    // Gated on sceneReady, not just booted: booted flips true the instant
+    // the boot is triggered, before the flicker/splash/push-in cinematic
+    // has actually played — a scroll landing during that window used to
+    // cancel Scene 2's animation and permanently strand the page with the
+    // monitors still off. sceneReady only flips true once that's done.
+    if (!booted || !sceneReady) return;
+    const next = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, sceneZoom + deltaZoom));
+    zoomAnimToken++;
+    applySceneZoom(next);
+  }
+
   window.addEventListener(
     "wheel",
-    (e) => {
-      // Gated on sceneReady, not just booted: booted flips true the instant
-      // the boot is triggered, before the flicker/splash/push-in cinematic
-      // has actually played — a scroll landing during that window used to
-      // cancel Scene 2's animation and permanently strand the page with the
-      // monitors still off. sceneReady only flips true once that's done.
-      if (!booted || !sceneReady) return;
-      const next = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, sceneZoom - e.deltaY * 0.0025));
-      zoomAnimToken++;
-      applySceneZoom(next);
-    },
+    (e) => nudgeZoom(-e.deltaY * 0.0025),
     { passive: true }
   );
 
@@ -856,12 +861,40 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.addEventListener("wheel", fireOnce, { passive: false });
+
+  // Touch devices never fire "wheel" at all, so without this a phone could
+  // trigger the boot (via fireOnce, below) but then had no way to zoom in
+  // on the monitors afterward — every touchmove after boot hit fireOnce's
+  // own `if (booted) return;` and did nothing. A single-finger vertical
+  // drag now drives nudgeZoom() the same way a scroll wheel does: dragging
+  // up (finger moves up, the natural "scroll down" gesture) zooms in, the
+  // same sign convention as a positive wheel deltaY.
+  const TOUCH_ZOOM_SCALE = 0.006;
+  let touchZoomY = null;
+
+  window.addEventListener(
+    "touchstart",
+    (e) => {
+      touchZoomY = e.touches.length === 1 ? e.touches[0].clientY : null;
+    },
+    { passive: true }
+  );
+
   window.addEventListener(
     "touchmove",
     (e) => {
       e.preventDefault();
-      fireOnce(e);
+      if (!booted) {
+        fireOnce(e);
+        return;
+      }
+      if (e.touches.length !== 1) return;
+      const y = e.touches[0].clientY;
+      if (touchZoomY !== null) nudgeZoom((touchZoomY - y) * TOUCH_ZOOM_SCALE);
+      touchZoomY = y;
     },
     { passive: false }
   );
+
+  window.addEventListener("touchend", () => { touchZoomY = null; });
 });
