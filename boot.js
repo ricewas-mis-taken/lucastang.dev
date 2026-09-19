@@ -50,6 +50,18 @@ const SCREENS = {
   bottom: { x: 0.2807, y: 0.5187, w: 0.3045, h: 0.2150 },
 };
 
+// Manual override for narrow (phone) viewports. The auto-computed cluster
+// origin (center of both monitors' rendered bounding box — see
+// updateMonitorPositions()) assumes "centered on both monitors" is also
+// "looks good zoomed all the way in," which isn't always true once
+// object-fit:cover has cropped the photo down to a narrow portrait sliver.
+// Tune this with calibrate-mobile.html (drag to where the camera should
+// look, set the final zoom, copy the output here) instead of guessing.
+// null = not calibrated yet, falls back to the auto-computed origin/bounds
+// at every viewport width, same as before this existed.
+const MOBILE_BREAKPOINT_PX = 640;
+const MOBILE_VIEW = null; // e.g. { cx: 0.42, cy: 0.51, zoom: 2.8 }
+
 // Column count for the contribution graph — matched to the fallback grid's
 // density since the pane is a fixed, narrow width regardless of how many
 // weeks the API returns.
@@ -255,6 +267,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const unionBottom = Math.max(baseRects.top.top + baseRects.top.h, baseRects.bottom.top + baseRects.bottom.h);
     clusterOriginX = (unionLeft + unionRight) / 2;
     clusterOriginY = (unionTop + unionBottom) / 2;
+    // Below MOBILE_BREAKPOINT_PX, a hand-tuned MOBILE_VIEW (see its
+    // declaration above) wins over the auto-computed union-center — see
+    // calibrate-mobile.html for why the auto version isn't always right on
+    // a narrow portrait crop.
+    if (mobileViewActive(stageW)) {
+      clusterOriginX = MOBILE_VIEW.cx * stageW;
+      clusterOriginY = MOBILE_VIEW.cy * stageH;
+    }
     document.documentElement.style.setProperty("--cluster-cx", `${(clusterOriginX / stageW) * 100}%`);
     document.documentElement.style.setProperty("--cluster-cy", `${(clusterOriginY / stageH) * 100}%`);
 
@@ -328,12 +348,26 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function refreshZoomBounds() {
+    const stageW = stage.offsetWidth;
+    // MOBILE_VIEW.zoom is a hand-picked final zoom, not a safety bound —
+    // use it directly instead of running it through computeMaxZoomInFrame(),
+    // which optimizes for "keep both monitors in frame," not "looks good."
+    if (mobileViewActive(stageW)) {
+      ZOOM_MAX = MOBILE_VIEW.zoom;
+      document.documentElement.style.setProperty("--zoom-scale", ZOOM_MAX.toFixed(4));
+      if (sceneZoom > ZOOM_MAX) sceneZoom = ZOOM_MAX;
+      return;
+    }
     const computed = computeMaxZoomInFrame();
     if (computed && isFinite(computed) && computed > ZOOM_MIN) {
       ZOOM_MAX = computed;
       document.documentElement.style.setProperty("--zoom-scale", ZOOM_MAX.toFixed(4));
       if (sceneZoom > ZOOM_MAX) sceneZoom = ZOOM_MAX;
     }
+  }
+
+  function mobileViewActive(stageW) {
+    return MOBILE_VIEW !== null && stageW <= MOBILE_BREAKPOINT_PX;
   }
 
   if (deskPhoto.complete && deskPhoto.naturalWidth) {
