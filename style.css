@@ -18,6 +18,13 @@
 
   /* How far in Scene 2 pushes the camera (also the tight-zoom scroll limit) */
   --zoom-scale: 2.6;
+
+  /* #stage's scale on page load, before any zoom/scroll — 1 = plain
+     object-fit:cover fill, no scaling. boot.js's MOBILE_VIEW.startZoom
+     override (see its declaration) can pull this below 1 on narrow
+     viewports, to reveal more of the photo around the same cluster origin
+     — tune it with calibrate-mobile.html. */
+  --start-zoom: 1;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -50,6 +57,11 @@ body {
 }
 
 #desk-photo {
+  /* Fallback sizing only, for the brief window before the photo has loaded
+     and boot.js's updateMonitorPositions() can size it exactly (see there
+     for why it isn't just left at object-fit:cover permanently) — once that
+     runs, inline left/top/width/height (matching the true, possibly
+     container-overflowing cover-fit rect) override these. */
   position: absolute;
   inset: 0;
   width: 100%;
