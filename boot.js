@@ -59,8 +59,16 @@ const SCREENS = {
 // look, set the final zoom, copy the output here) instead of guessing.
 // null = not calibrated yet, falls back to the auto-computed origin/bounds
 // at every viewport width, same as before this existed.
+// startZoom sets the scale #stage sits at on page load, before any
+// scroll/push-in — 1 (the default) is a plain object-fit:cover fill with no
+// scaling; below 1 pulls the camera back from there, shrinking the photo
+// around the same cx/cy origin and revealing the page background around it,
+// which is what actually fixes "the load frame is cropped to a random slice
+// of the photo on a narrow phone" (cx/cy alone can't: a transform-origin
+// does nothing to an identity scale, so it only ever affected the zoomed-in
+// end). Tune both together in calibrate-mobile.html.
 const MOBILE_BREAKPOINT_PX = 640;
-const MOBILE_VIEW = null; // e.g. { cx: 0.42, cy: 0.51, zoom: 2.8 }
+const MOBILE_VIEW = null; // e.g. { cx: 0.42, cy: 0.51, zoom: 2.8, startZoom: 0.75 }
 
 // Column count for the contribution graph — matched to the fallback grid's
 // density since the pane is a fixed, narrow width regardless of how many
@@ -162,7 +170,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  const ZOOM_MIN = 1;
+  // Mutable, same as ZOOM_MAX below: refreshZoomBounds() drops this below 1
+  // once real layout/photo geometry is known, if MOBILE_VIEW.startZoom asks
+  // for a zoomed-out load frame on a narrow viewport.
+  let ZOOM_MIN = 1;
   const ZOOM_MAX_DEFAULT = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--zoom-scale")) || 2.6;
   // Mutable: narrowed by refreshZoomBounds() once real layout/photo geometry
   // is known, so scrolling in never crops a monitor out of frame.
@@ -223,6 +234,20 @@ document.addEventListener("DOMContentLoaded", () => {
       deskPhoto.naturalWidth,
       deskPhoto.naturalHeight
     );
+    // Sized/positioned to the *true* cover-fit rect, not object-fit:cover's
+    // implicit 100%/100% box — that box permanently clips whatever falls
+    // outside the container before #stage's transform ever runs, so
+    // shrinking it (MOBILE_VIEW.startZoom < 1) could only ever shrink the
+    // already-cropped view, never reveal the rest of the photo. Explicitly
+    // sizing to renderW/renderH (which overflow the container on the
+    // cover-cropped axis, same as object-fit:cover would've rendered) means
+    // #stage's existing transform:scale() naturally uncrops those pixels as
+    // it scales past 1 down toward 0, same principle as applyOverlayZoom()
+    // below — just applied to the photo itself instead of hand-replicated.
+    deskPhoto.style.left = `${renderX}px`;
+    deskPhoto.style.top = `${renderY}px`;
+    deskPhoto.style.width = `${renderW}px`;
+    deskPhoto.style.height = `${renderH}px`;
     // Shrinks the box on each axis by exactly the amount its rotated
     // bounding box would otherwise grow by, so a rotated overlay's corners
     // still land inside the unrotated bezel footprint: for a W x H box
@@ -354,10 +379,19 @@ document.addEventListener("DOMContentLoaded", () => {
     // which optimizes for "keep both monitors in frame," not "looks good."
     if (mobileViewActive(stageW)) {
       ZOOM_MAX = MOBILE_VIEW.zoom;
+      ZOOM_MIN = typeof MOBILE_VIEW.startZoom === "number" ? MOBILE_VIEW.startZoom : 1;
       document.documentElement.style.setProperty("--zoom-scale", ZOOM_MAX.toFixed(4));
+      document.documentElement.style.setProperty("--start-zoom", ZOOM_MIN.toFixed(4));
+      // Pre-boot, sceneZoom has no history of its own — it should just track
+      // whatever the load-frame floor currently is, same as its initial
+      // declaration above.
+      if (!booted) sceneZoom = ZOOM_MIN;
       if (sceneZoom > ZOOM_MAX) sceneZoom = ZOOM_MAX;
       return;
     }
+    ZOOM_MIN = 1;
+    document.documentElement.style.setProperty("--start-zoom", "1");
+    if (!booted) sceneZoom = ZOOM_MIN;
     const computed = computeMaxZoomInFrame();
     if (computed && isFinite(computed) && computed > ZOOM_MIN) {
       ZOOM_MAX = computed;
