@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="light dark" name="color-scheme"/>
+<title>Carmen Focus Extension Privacy Policy</title>
+<meta content="Privacy policy for the Carmen Focus browser extension." name="description"/>
+<meta content="Carmen Focus Extension Privacy Policy" property="og:title"/>
+<link href="/favicon.ico" rel="icon"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #000000;
+  --bg-deep: #000000;
+  --ink: #ffffff;
+  --muted: #cccccc;
+  --line: #222222;
+  --code: #111111;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #ffffff;
+    --bg-deep: #ffffff;
+    --ink: #000000;
+    --muted: #444444;
+    --line: #dddddd;
+    --code: #f2f2f2;
+  }
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: "Inter", system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--ink); line-height: 1.6; min-height: 100vh; display: flex; flex-direction: column; }
+.display { font-family: "Architects Daughter", cursive; font-weight: 700; }
+header { position: sticky; top: 0; z-index: 50; background: var(--bg-deep); border-bottom: 1px solid var(--line); }
+.nav { max-width: 1000px; margin: 0 auto; padding: 1.1rem 1.5rem; display: flex; align-items: center; gap: 0.6rem; }
+.nav a { text-decoration: none; display: flex; align-items: center; gap: 0.6rem; color: var(--ink); }
+.logo-mark { width: 32px; height: 32px; border-radius: 9px; object-fit: cover; }
+.logo { font-size: 1.2rem; letter-spacing: -0.01em; }
+main { flex: 1; max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem; width: 100%; }
+h1 { font-size: 2rem; line-height: 1.2; margin-bottom: 0.5rem; }
+h2 { font-size: 1.3rem; margin: 2.25rem 0 0.6rem; }
+p, li { color: var(--muted); }
+p { margin-bottom: 0.9rem; }
+ul { margin: 0 0 0.9rem 1.25rem; }
+li { margin-bottom: 0.4rem; }
+strong { color: var(--ink); font-weight: 600; }
+a { color: var(--ink); text-underline-offset: 3px; }
+code { background: var(--code); padding: 0.1em 0.35em; border-radius: 4px; font-size: 0.9em; color: var(--ink); }
+.updated { font-size: 0.95rem; }
+footer { text-align: center; padding: 2rem 1.5rem; color: var(--muted); font-size: 0.9rem; border-top: 1px solid var(--line); }
+</style>
+</head>
+<body>
+<header>
+<div class="nav">
+<a href="/">
+<img src="/apple-touch-icon.png" alt="Avatar Logo" class="logo-mark" />
+<div class="logo display">lucastang.dev</div>
+</a>
+</div>
+</header>
+<main>
+<h1 class="display">Carmen Focus Extension Privacy Policy</h1>
+<p class="updated">Last updated: November 11, 2026</p>
+
+<h2 class="display">What the extension does</h2>
+<p>Carmen Focus blocks distracting sites during a focus session you start. It supports soft lock, hard lock, and "only these websites" lists. It also keeps a log of slips and a per-site screen-time total. It is available for Chrome and Firefox.</p>
+
+<h2 class="display">Data it handles</h2>
+<ul>
+<li><strong>Websites you visit:</strong> the domain of your open tabs. Used only to decide whether a site is allowed during a session and to count time per site for the screen-time view.</li>
+<li><strong>Session state:</strong> your active task, allowed-site lists, extra sites added during a session, and slips.</li>
+</ul>
+<p>Nothing else. No page content, no form data, no passwords, no search queries, no browsing history beyond the current session's tabs, no personal identifiers, and no analytics.</p>
+
+<h2 class="display">Where it stays</h2>
+<ul>
+<li>All of this is stored locally in your browser (<code>chrome.storage.local</code>) on your own computer.</li>
+<li>The extension's only network connection is to the Carmen Focus desktop app running on the same computer, at <code>127.0.0.1</code> (localhost). That traffic never leaves your machine.</li>
+<li>The extension itself sends nothing to any server on the internet, to us, or to any third party.</li>
+</ul>
+<p>If you also use the Carmen Focus desktop app, that app can sync tasks and finished sessions to your own account. That is separate from the extension and covered by the desktop app's privacy policy, not this one.</p>
+
+<h2 class="display">No selling or sharing</h2>
+<p>No selling, no sharing, no advertising, no tracking, no third-party SDKs, and no remote code.</p>
+<p>Data is not used or transferred for determining creditworthiness or for lending purposes, or for any purpose unrelated to the single purpose of blocking sites during focus sessions.</p>
+
+<h2 class="display">Why each permission is needed</h2>
+<ul>
+<li><strong>tabs and tabGroups:</strong> to see which site a tab is on and to close, redirect or group blocked tabs.</li>
+<li><strong>Host access to all websites:</strong> to check the address of any tab against your allowed list and to show the block page. The extension does not read or change page content for any other purpose.</li>
+<li><strong>storage:</strong> to keep session state and screen-time totals locally.</li>
+<li><strong>scripting:</strong> to show the block screen on a page.</li>
+<li><strong>alarms and notifications:</strong> to end timers on time and to tell you a session ended.</li>
+<li><strong>Access to <code>127.0.0.1:5847</code>:</strong> to talk to the desktop app on the same computer.</li>
+</ul>
+
+<h2 class="display">Retention and deletion</h2>
+<p>Data stays until you clear it. Removing the extension deletes its local data.</p>
+
+<h2 class="display">Children</h2>
+<p>Carmen Focus is not directed at children under 13, and you must be at least 13 to use it.</p>
+
+<h2 class="display">Contact</h2>
+<p>Developer: Lucas Tang. Email: <a href="mailto:help.type_sense@lucastang.dev">help.type_sense@lucastang.dev</a></p>
+
+<h2 class="display">Changes</h2>
+<p>If this policy changes, the update will be announced on this page and the "last updated" date above will change.</p>
+</main>
+<footer>© 2026 lucastang.dev</footer>
+</body>
+</html>
