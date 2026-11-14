@@ -225,8 +225,9 @@ footer { text-align: center; padding: 2rem 1.5rem; color: var(--muted); font-siz
     <p>
       The program runs silently in your system tray while you work normally. It measures three things
       from your keyboard: <strong>dwell time</strong> (how long you hold each key), <strong>flight time</strong>
-      (how fast you move between keys), and <strong>burst length</strong> (how long your continuous typing runs are).
-      These patterns shift with stress, fatigue, and cognitive load — and that's what we're studying.
+      (how fast you move between keys), <strong>burst length</strong> (how long your continuous typing runs are),
+      <strong>pauses</strong> (gaps in typing), how often you <strong>correct</strong> mistakes, and your overall typing speed,
+      plus the share of keys in each broad category (letters, digits, space, etc.). These patterns shift with stress, fatigue, and cognitive load — and that's what we're studying.
     </p>
     <p>
       Every key is converted to a category number before anything is recorded. The logger sees
@@ -238,7 +239,7 @@ footer { text-align: center; padding: 2rem 1.5rem; color: var(--muted); font-siz
   <section>
     <h2 class="display">Download &amp; Run</h2>
     <p style="font-size: 0.9rem;">
-      Current version: <strong>1.3.1</strong>. You can confirm which build you're on anytime via
+      Current version: <strong>2.0.0</strong>. You can confirm which build you're on anytime via
       <strong>Show Version</strong> in the tray menu. The app checks for updates every 5 minutes and
       updates itself silently — if the tray icon briefly disappears and comes back, that's just an
       auto-update, not a crash.
@@ -351,6 +352,7 @@ footer { text-align: center; padding: 2rem 1.5rem; color: var(--muted); font-siz
           <div class="menu-item"><div class="menu-dot"></div> Show Version</div>
           <div class="menu-item"><div class="menu-dot"></div> Do Not Disturb</div>
           <div class="menu-item"><div class="menu-dot"></div> Gaming Mode</div>
+          <div class="menu-item"><div class="menu-dot"></div> Open Raw Data Folder</div>
           <div class="menu-item"><div class="menu-dot"></div> Quit Logger</div>
         </div>
       </div>
@@ -359,6 +361,11 @@ footer { text-align: center; padding: 2rem 1.5rem; color: var(--muted); font-siz
     <p style="margin-top: 1.5rem;">
       The program does <strong>not</strong> show in your taskbar or Alt+Tab list — it's fully background.
       If you want to stop it, right-click the tray icon and choose <strong>Quit Logger</strong>.
+    </p>
+
+    <p style="font-size: 0.9rem;">
+      <strong>Open Raw Data Folder</strong> opens the folder on your computer where the program keeps its timing files,
+      so you can see exactly what it records.
     </p>
 
     <div class="card">
@@ -437,6 +444,14 @@ footer { text-align: center; padding: 2rem 1.5rem; color: var(--muted); font-siz
   </section>
 
   <section>
+    <h2 class="display">No Internet?</h2>
+    <p>
+      If you go offline, your data is saved on your computer and sent automatically once you're connected again.
+      Nothing is lost, and you don't need to do anything.
+    </p>
+  </section>
+
+  <section>
     <h2 class="display">Uninstalling</h2>
     <p>
       Go to <strong>Settings → Apps → Installed apps</strong> (or "Apps &amp; Features" on older
@@ -448,7 +463,7 @@ footer { text-align: center; padding: 2rem 1.5rem; color: var(--muted); font-siz
 
 </main>
 
-<footer>© 2026 lucastang.dev</footer>
+<footer>Guide current for TypeSense v2.0.0 · © 2026 lucastang.dev</footer>
 
 <!-- STICKY BANNER -->
 <div class="sticky-banner">
