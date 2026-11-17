@@ -454,10 +454,10 @@ footer { text-align: center; padding: 2rem 1.5rem; color: var(--muted); font-siz
   <section>
     <h2 class="display">Uninstalling</h2>
     <p>
-      Go to <strong>Settings → Apps → Installed apps</strong> (or "Apps &amp; Features" on older
-      Windows), find <strong>TypeSense</strong>, and uninstall it like any other program. That single
-      step removes everything: the app itself, the scheduled watchdog task that keeps it running, the
-      autostart entry, and the local data folder. Nothing is left behind, and no manual cleanup is needed.
+      If you installed with the installer, go to <strong>Settings → Apps → Installed apps</strong> (or "Apps &amp; Features" on older
+      Windows), find <strong>TypeSense</strong>, and uninstall it. If you used the PowerShell setup script, it has no entry
+      there, so the researcher will send you short removal steps. Either way, uninstalling does <strong>not</strong> delete your
+      raw typing log: it stays in <code>%LOCALAPPDATA%\TypeSense</code> on your computer. Delete that folder by hand if you want it gone.
     </p>
   </section>
 
