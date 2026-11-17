@@ -237,37 +237,33 @@ footer { text-align: center; padding: 2rem 1.5rem; color: var(--muted); font-siz
   </section>
 
   <section>
-    <h2 class="display">Download &amp; Run</h2>
+    <h2 class="display">Install</h2>
     <p style="font-size: 0.9rem;">
       Current version: <strong>2.0.0</strong>. You can confirm which build you're on anytime via
-      <strong>Show Version</strong> in the tray menu. The app checks for updates every 5 minutes and
-      updates itself silently — if the tray icon briefly disappears and comes back, that's just an
-      auto-update, not a crash.
+      <strong>Show Version</strong> in the tray menu.
     </p>
     <div class="steps">
       <div class="step">
         <div class="step-num">1</div>
         <div class="step-body">
-          <strong>Download the file</strong>
-          <p>Download <code>TypeSenseSetup.exe</code> from the link Lucas sent you. It's a single
-          self-contained installer — no other files needed.</p>
+          <strong>Open PowerShell</strong>
+          <p>Press the Windows key, type <code>PowerShell</code>, and press Enter. You don't need to run it as administrator.</p>
         </div>
       </div>
       <div class="step">
         <div class="step-num">2</div>
         <div class="step-body">
-          <strong>Get past your browser's warning</strong>
-          <p>Because this is a new, unsigned executable, your browser will flag it. See the section below
-          for browser-specific steps.</p>
+          <strong>Run the one-liner</strong>
+          <p>Paste this and press Enter:</p>
+          <p><code>irm https://raw.githubusercontent.com/ricewas-mis-taken/TypeSense/main/setup.ps1 | iex</code></p>
+          <p>It installs Python 3.11 through winget if you don't have it, downloads TypeSense, sets it to start when you log in, and launches it. Nothing else to download.</p>
         </div>
       </div>
       <div class="step">
         <div class="step-num">3</div>
         <div class="step-body">
-          <strong>Run it</strong>
-          <p>Double-click <code>TypeSenseSetup.exe</code> and click through the installer. If Windows SmartScreen pops up saying
-          "Windows protected your PC," click <strong>More info</strong> → <strong>Run anyway</strong> This is normal for new unsigned software.
-          Leave <strong>"Launch TypeSense now"</strong> checked at the end so it starts right away.</p>
+          <strong>Unlock with your passcode</strong>
+          <p>The tray icon starts red and locked. Right-click it, choose <strong>Confirm Password</strong>, and enter the passcode Lucas gave you. Nothing is sent until it is accepted, and the icon turns green once you're in.</p>
         </div>
       </div>
       <div class="step">
@@ -291,46 +287,19 @@ footer { text-align: center; padding: 2rem 1.5rem; color: var(--muted); font-siz
   </section>
 
   <section>
-    <h2 class="display">Why It Gets Flagged</h2>
+    <h2 class="display">If Your Antivirus Complains</h2>
     <div class="card">
       <span class="card-title">Expected behavior — not a real threat</span>
       <p>
-        Antivirus software and browsers flag <em>any</em> new, unsigned executable that hooks into keyboard input.
-        This is a heuristic — it looks suspicious because keyloggers can be malware, even though this one is a
-        research tool with published source code.
+        Antivirus software may flag any new program that hooks into keyboard input, because keyloggers can be malware.
+        This one is a research tool with published source code.
       </p>
       <p>
-        The source code is fully open at <strong>github.com/ricewas-mis-taken/TypeSense</strong>.
-        You can verify exactly what it does. If your antivirus quarantines it, you may need to add an exception.
+        The source code is fully open at <strong>github.com/ricewas-mis-taken/TypeSense</strong>, and the setup script is
+        <code>setup.ps1</code> in that repo. You can read exactly what it does before running it. If your antivirus blocks it,
+        you may need to add an exception.
       </p>
     </div>
-
-    <div class="card">
-      <span class="card-title">Microsoft Edge — Step by Step</span>
-      <div class="edge-step-list">
-        <div class="edge-item">
-          <span class="edge-badge">1</span>
-          <p>After the download starts, a bar appears at the bottom of Edge. Click the <strong>three-dot menu (…)</strong> next to the file name.</p>
-        </div>
-        <div class="edge-item">
-          <span class="edge-badge">2</span>
-          <p>Click <strong>Keep</strong>. A follow-up dialog will appear warning you about the file.</p>
-        </div>
-        <div class="edge-item">
-          <span class="edge-badge">3</span>
-          <p>Hover over <strong>Delete</strong> — this reveals a secondary option below it.</p>
-        </div>
-        <div class="edge-item">
-          <span class="edge-badge">4</span>
-          <p>Click <strong>Download anyway</strong>. The file will now save normally.</p>
-        </div>
-      </div>
-    </div>
-
-    <p style="margin-top: 1.5rem; font-size: 0.9rem;">
-      <strong>Note:</strong> On Chrome, click the download arrow → Keep dangerous file. 
-      On Firefox, click Keep file in the warning dialog.
-    </p>
   </section>
 
   <section>
@@ -454,9 +423,7 @@ footer { text-align: center; padding: 2rem 1.5rem; color: var(--muted); font-siz
   <section>
     <h2 class="display">Uninstalling</h2>
     <p>
-      If you installed with the installer, go to <strong>Settings → Apps → Installed apps</strong> (or "Apps &amp; Features" on older
-      Windows), find <strong>TypeSense</strong>, and uninstall it. If you used the PowerShell setup script, it has no entry
-      there, so the researcher will send you short removal steps. Either way, uninstalling does <strong>not</strong> delete your
+      TypeSense installed with the setup script has no entry in Windows' Apps list, so the researcher will send you short removal steps. Uninstalling does <strong>not</strong> delete your
       raw typing log: it stays in <code>%LOCALAPPDATA%\TypeSense</code> on your computer. Delete that folder by hand if you want it gone.
     </p>
   </section>
