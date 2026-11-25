@@ -39,3 +39,12 @@ compatibility_date = "2026-08-09"
 #   echo "{}" > analytics.json
 #   git add analytics.json && git commit -m "chore: init analytics data branch"
 #   git push -u origin analytics-data
+
+# /api/rsvp (the Carmen Focus launch page at /carmen) stores anonymous RSVP
+# counts in rsvp.json on its own "rsvp-data" branch. Same one-time setup:
+#   git checkout --orphan rsvp-data
+#   git rm -rf .
+#   echo '{"total":0,"platforms":{},"ids":[]}' > rsvp.json
+#   git add rsvp.json && git commit -m "chore: init rsvp data branch"
+#   git push -u origin rsvp-data
+# then redeploy the worker: cd worker && npx wrangler deploy

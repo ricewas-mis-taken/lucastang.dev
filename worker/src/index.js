@@ -427,6 +427,102 @@ async function handleLeaderboardPost(request, env) {
   });
 }
 
+// RSVP for the Carmen Focus launch page (lucastang.dev/carmen): one anonymous
+// tap per browser, plus which platform the person wants first. Same storage
+// pattern as analytics. Only counts and random browser ids are stored -- no
+// emails or names -- because the data branch of this repo is public.
+const RSVP_BRANCH = "rsvp-data";
+const RSVP_PATH = "rsvp.json";
+const RSVP_CONTENTS_URL = `https://api.github.com/repos/${REPO}/contents/${RSVP_PATH}`;
+const RSVP_PLATFORMS = ["windows", "mac", "chrome", "firefox", "iphone"];
+const RSVP_MAX_IDS = 20000;
+const RSVP_MAX_ATTEMPTS = 3;
+
+function emptyRsvp() {
+  const platforms = {};
+  for (const key of RSVP_PLATFORMS) platforms[key] = 0;
+  return { total: 0, platforms, ids: [] };
+}
+
+function sanitizeRsvp(raw) {
+  const clean = emptyRsvp();
+  if (!raw || typeof raw !== "object") return clean;
+  clean.ids = Array.isArray(raw.ids) ? raw.ids.filter((id) => typeof id === "string").slice(0, RSVP_MAX_IDS) : [];
+  for (const key of RSVP_PLATFORMS) clean.platforms[key] = Math.max(0, Math.floor(Number(raw.platforms?.[key]) || 0));
+  clean.total = clean.ids.length;
+  return clean;
+}
+
+function publicRsvp(stats) {
+  return { total: stats.total, platforms: stats.platforms };
+}
+
+async function handleRsvpGet(env) {
+  try {
+    const res = await fetch(`${RSVP_CONTENTS_URL}?ref=${RSVP_BRANCH}`, { headers: githubHeaders(env.GITHUB_TOKEN) });
+    const stats = res.status === 404 ? emptyRsvp() : sanitizeRsvp(JSON.parse(base64ToUtf8((await res.json()).content)));
+    if (!res.ok && res.status !== 404) throw new Error(`contents fetch ${res.status}`);
+    return new Response(JSON.stringify(publicRsvp(stats)), {
+      status: 200,
+      headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=20", ...corsHeaders() },
+    });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: "rsvp_unavailable" }), {
+      status: 503,
+      headers: { "Content-Type": "application/json", ...corsHeaders() },
+    });
+  }
+}
+
+async function handleRsvpPost(request, env) {
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return new Response(JSON.stringify({ error: "bad_request" }), { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders() } });
+  }
+  const id = typeof body?.id === "string" ? body.id.slice(0, 64) : "";
+  const wants = Array.isArray(body?.platforms) ? body.platforms.filter((p) => RSVP_PLATFORMS.includes(p)) : [];
+  if (!/^[A-Za-z0-9-]{8,64}$/.test(id)) {
+    return new Response(JSON.stringify({ error: "bad_id" }), { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders() } });
+  }
+  const headers = githubHeaders(env.GITHUB_TOKEN);
+  try {
+    let stats = emptyRsvp();
+    for (let attempt = 0; attempt < RSVP_MAX_ATTEMPTS; attempt++) {
+      let sha;
+      const getRes = await fetch(`${RSVP_CONTENTS_URL}?ref=${RSVP_BRANCH}`, { headers });
+      if (getRes.ok) {
+        const file = await getRes.json();
+        sha = file.sha;
+        stats = sanitizeRsvp(JSON.parse(base64ToUtf8(file.content)));
+      } else if (getRes.status !== 404) {
+        throw new Error(`github get ${getRes.status}`);
+      }
+      if (stats.ids.includes(id)) break; // already counted: tapping again does not inflate it
+      if (stats.ids.length >= RSVP_MAX_IDS) break;
+      stats.ids.push(id);
+      stats.total = stats.ids.length;
+      for (const key of new Set(wants)) stats.platforms[key] += 1;
+      const putRes = await fetch(RSVP_CONTENTS_URL, {
+        method: "PUT",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: "rsvp: record interest",
+          content: utf8ToBase64(JSON.stringify(stats, null, 2)),
+          branch: RSVP_BRANCH,
+          ...(sha ? { sha } : {}),
+        }),
+      });
+      if (putRes.ok) break;
+      if (putRes.status !== 409 || attempt === RSVP_MAX_ATTEMPTS - 1) throw new Error(`github put ${putRes.status}`);
+    }
+  } catch (e) {
+    return new Response(JSON.stringify({ error: "rsvp_unavailable" }), { status: 503, headers: { "Content-Type": "application/json", ...corsHeaders() } });
+  }
+  return new Response(JSON.stringify(publicRsvp(stats)), { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders() } });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -453,6 +549,14 @@ export default {
 
     if (url.pathname === "/api/analytics" && request.method === "POST") {
       return handleAnalyticsPost(request, env);
+    }
+
+    if (url.pathname === "/api/rsvp" && request.method === "GET") {
+      return handleRsvpGet(env);
+    }
+
+    if (url.pathname === "/api/rsvp" && request.method === "POST") {
+      return handleRsvpPost(request, env);
     }
 
     return new Response("Not found", { status: 404, headers: corsHeaders() });
