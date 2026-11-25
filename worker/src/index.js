@@ -474,6 +474,45 @@ async function handleRsvpGet(env) {
   }
 }
 
+const RSVP_PRICES = ["free", "under-3", "3-5", "5-8", "8-12", "12-plus"];
+const RSVP_MODELS = ["subscription", "one-time", "either"];
+
+function cleanRsvpEntry(body, wants) {
+  const text = (v, n) => (typeof v === "string" ? v.trim().slice(0, n) : "");
+  const email = text(body?.contact?.email, 120);
+  const phone = text(body?.contact?.phone, 30);
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return { error: "bad_email" };
+  if (phone && (!/^[+()\d\s.-]{7,30}$/.test(phone) || phone.replace(/\D/g, "").length < 7)) return { error: "bad_phone" };
+  const price = RSVP_PRICES.includes(body?.price) ? body.price : "";
+  const model = RSVP_MODELS.includes(body?.payModel) ? body.payModel : "";
+  const payPlatforms = Array.isArray(body?.payPlatforms) ? [...new Set(body.payPlatforms.filter((p) => RSVP_PLATFORMS.includes(p)))] : [];
+  return { value: { email, phone, price, payModel: model, payPlatforms, wantPlatforms: [...new Set(wants)], struggle: text(body?.struggle, 400) } };
+}
+
+// Owner-only export of the private entries: Authorization: Bearer <ADMIN_TOKEN>.
+async function handleRsvpExport(request, env, url) {
+  const auth = request.headers.get("Authorization") || "";
+  if (!env.ADMIN_TOKEN || auth !== `Bearer ${env.ADMIN_TOKEN}` || !env.RSVP_ENTRIES) {
+    return new Response("Forbidden", { status: 403 });
+  }
+  const rows = [];
+  let cursor;
+  for (let page = 0; page < 20; page++) {
+    const list = await env.RSVP_ENTRIES.list({ prefix: "e:", cursor, limit: 1000 });
+    const values = await Promise.all(list.keys.map((k) => env.RSVP_ENTRIES.get(k.name, "json")));
+    values.forEach((v) => v && rows.push(v));
+    if (list.list_complete) break;
+    cursor = list.cursor;
+  }
+  if (url.searchParams.get("format") === "csv") {
+    const cols = ["updatedAt", "email", "phone", "price", "payModel", "payPlatforms", "wantPlatforms", "struggle"];
+    const esc = (v) => `"${String(Array.isArray(v) ? v.join("|") : v ?? "").replace(/"/g, '""')}"`;
+    const csv = [cols.join(","), ...rows.map((r) => cols.map((c) => esc(r[c])).join(","))].join("\n");
+    return new Response(csv, { headers: { "Content-Type": "text/csv; charset=utf-8" } });
+  }
+  return new Response(JSON.stringify(rows, null, 2), { headers: { "Content-Type": "application/json" } });
+}
+
 async function handleRsvpPost(request, env) {
   let body;
   try {
@@ -485,6 +524,18 @@ async function handleRsvpPost(request, env) {
   const wants = Array.isArray(body?.platforms) ? body.platforms.filter((p) => RSVP_PLATFORMS.includes(p)) : [];
   if (!/^[A-Za-z0-9-]{8,64}$/.test(id)) {
     return new Response(JSON.stringify({ error: "bad_id" }), { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders() } });
+  }
+  // Private details (contact, price, what they would pay on) go to KV, never to the public data branch.
+  const entry = cleanRsvpEntry(body, wants);
+  if (entry.error) {
+    return new Response(JSON.stringify({ error: entry.error }), { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders() } });
+  }
+  if (env.RSVP_ENTRIES) {
+    try {
+      await env.RSVP_ENTRIES.put(`e:${id}`, JSON.stringify({ id, ...entry.value, updatedAt: new Date().toISOString() }));
+    } catch (e) {
+      return new Response(JSON.stringify({ error: "rsvp_unavailable" }), { status: 503, headers: { "Content-Type": "application/json", ...corsHeaders() } });
+    }
   }
   const headers = githubHeaders(env.GITHUB_TOKEN);
   let stats = emptyRsvp();
@@ -549,6 +600,10 @@ export default {
 
     if (url.pathname === "/api/analytics" && request.method === "POST") {
       return handleAnalyticsPost(request, env);
+    }
+
+    if (url.pathname === "/api/rsvp/export" && request.method === "GET") {
+      return handleRsvpExport(request, env, url);
     }
 
     if (url.pathname === "/api/rsvp" && request.method === "GET") {
