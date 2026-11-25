@@ -487,8 +487,8 @@ async function handleRsvpPost(request, env) {
     return new Response(JSON.stringify({ error: "bad_id" }), { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders() } });
   }
   const headers = githubHeaders(env.GITHUB_TOKEN);
+  let stats = emptyRsvp();
   try {
-    let stats = emptyRsvp();
     for (let attempt = 0; attempt < RSVP_MAX_ATTEMPTS; attempt++) {
       let sha;
       const getRes = await fetch(`${RSVP_CONTENTS_URL}?ref=${RSVP_BRANCH}`, { headers });
