@@ -1,1 +1,13 @@
-{"total":0,"platforms":{"windows":0,"mac":0,"chrome":0,"firefox":0,"iphone":0},"ids":[]}
+{
+  "total": 1,
+  "platforms": {
+    "windows": 1,
+    "mac": 0,
+    "chrome": 0,
+    "firefox": 0,
+    "iphone": 0
+  },
+  "ids": [
+    "deploytest-0000"
+  ]
+}
