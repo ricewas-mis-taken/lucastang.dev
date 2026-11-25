@@ -1,14 +1,13 @@
 {
-  "total": 2,
+  "total": 1,
   "platforms": {
-    "windows": 2,
+    "windows": 1,
     "mac": 1,
-    "chrome": 2,
+    "chrome": 1,
     "firefox": 1,
     "iphone": 1
   },
   "ids": [
-    "7c308f1e-dab9-4c53-affc-d787b9221cf5",
-    "deploytest-v2-0002"
+    "7c308f1e-dab9-4c53-affc-d787b9221cf5"
   ]
 }
