@@ -1,13 +1,14 @@
 {
-  "total": 1,
+  "total": 2,
   "platforms": {
-    "windows": 1,
-    "mac": 1,
-    "chrome": 1,
-    "firefox": 1,
-    "iphone": 1
+    "windows": 2,
+    "mac": 2,
+    "chrome": 2,
+    "firefox": 2,
+    "iphone": 2
   },
   "ids": [
-    "7c308f1e-dab9-4c53-affc-d787b9221cf5"
+    "7c308f1e-dab9-4c53-affc-d787b9221cf5",
+    "93486233-bab4-4e83-9863-3c6140509ddc"
   ]
 }
