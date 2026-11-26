@@ -341,6 +341,7 @@ Your browser can&rsquo;t play this video.
 <button class="tab" role="tab" id="t-rules" aria-controls="p-rules" aria-selected="false" tabindex="-1">Rules for every task</button>
 <button class="tab" role="tab" id="t-timer" aria-controls="p-timer" aria-selected="false" tabindex="-1">Pomodoro and breaks</button>
 <button class="tab" role="tab" id="t-note" aria-controls="p-note" aria-selected="false" tabindex="-1">QuickNote</button>
+<button class="tab" role="tab" id="t-why" aria-controls="p-why" aria-selected="false" tabindex="-1">Say why</button>
 </div>
 
 <div class="panel on" role="tabpanel" id="p-locks" aria-labelledby="t-locks">
@@ -522,6 +523,29 @@ Your browser can&rsquo;t play this video.
 <div class="frame"><img src="img/quicknote.jpg" alt="QuickNote with a checklist" loading="lazy"/></div>
 </div>
 </div>
+
+<div class="panel" role="tabpanel" id="p-why" aria-labelledby="t-why" hidden>
+<div>
+<h3>Every escape needs a reason</h3>
+<p class="intro">Pausing the timer, unblocking an app and allowing a site all ask you why first.</p>
+<div class="facts">
+<div><b>Pause: pick why</b><span>Break, Long break, Interrupted, Stuck or Checking something. Breaks are free. Checking something comes out of a small pause budget, so a pause can&rsquo;t quietly become an escape.</span></div>
+<div><b>Unblock an app: type why</b><span>Carmen asks why before it lets a blocked app back for the session. Having to put it into words turns a reflex into a choice.</span></div>
+<div><b>Allow a site: same in the browser</b><span>The extension asks why you need the site right now before it adds it.</span></div>
+<div><b>See your patterns</b><span>Every reason is logged with your session, so you can see what pulls you away most.</span></div>
+</div>
+</div>
+<div class="vis">
+<div class="two">
+<div class="frame"><img src="img/pause-reasons.jpg" alt="The Pause the timer popup with reasons" loading="lazy"/></div>
+<div style="display:grid;gap:1rem;align-content:start">
+<div class="frame"><img src="img/unblock-reason.jpg" alt="Unblock Discord for the rest of this session, why?" loading="lazy"/></div>
+<div class="frame"><img src="img/site-reason.jpg" alt="The extension asking why you need a site right now" loading="lazy"/></div>
+</div>
+</div>
+<p class="cap">Real screens: pause reasons, the unblock prompt, and the extension&rsquo;s allow-a-site reason.</p>
+</div>
+</div>
 </div>
 </section>
 
@@ -602,12 +626,9 @@ Your browser can&rsquo;t play this video.
 <form id="form" novalidate>
 <div id="formBody">
 <fieldset>
-<legend>How can I reach you? <span style="font-weight:500;color:var(--ink2)">(optional)</span></legend>
-<p class="hint">Leave an email or a phone number so I can tell you when Carmen is ready. Skip it and your RSVP still counts.</p>
-<div class="row2">
+<legend>Your email <span style="font-weight:500;color:var(--ink2)">(optional)</span></legend>
+<p class="hint">I&rsquo;ll send a thank-you right away, then email you as new things get done. Skip it and your RSVP still counts.</p>
 <label class="f">Email<input type="email" id="email" autocomplete="email" placeholder="you@example.com"/></label>
-<label class="f">Phone<input type="tel" id="phone" autocomplete="tel" placeholder="+1 555 123 4567"/></label>
-</div>
 </fieldset>
 
 <fieldset>
@@ -662,12 +683,12 @@ Your browser can&rsquo;t play this video.
 <button class="btn" id="rsvpBtn" type="submit">RSVP and claim my free year</button>
 <span class="msg" id="msg" role="status"></span>
 </div>
-<p class="fine">Your answers are stored privately. I&rsquo;ll only use your email or phone to tell you about Carmen, and I won&rsquo;t share it. The free year applies if Carmen becomes paid. Your browser sends a random ID so tapping twice doesn&rsquo;t count twice.</p>
+<p class="fine">Your answers are stored privately. I&rsquo;ll only use your email for Carmen updates, I won&rsquo;t share it, and every email has an unsubscribe link. The free year applies if Carmen becomes paid. Your browser sends a random ID so tapping twice doesn&rsquo;t count twice.</p>
 </div>
 
 <div class="done" id="done">
 <h3>You&rsquo;re in.</h3>
-<p>Thanks for the RSVP. Your first year of Carmen is free if it becomes paid. If you left an email or phone, I&rsquo;ll use it when Carmen is ready on your platform.</p>
+<p>Thanks for the RSVP. Your first year of Carmen is free if it becomes paid. If you left an email, a thank-you is on its way, and I&rsquo;ll keep you posted as new things get done.</p>
 <div class="bars" id="bars"><h5>What people want first</h5></div>
 </div>
 </form>
@@ -853,11 +874,10 @@ Your browser can&rsquo;t play this video.
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();
-    var email = document.getElementById('email').value.trim(), phone = document.getElementById('phone').value.trim();
+    var email = document.getElementById('email').value.trim();
     msg.className = 'msg'; msg.textContent = '';
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { msg.className = 'msg bad'; msg.textContent = 'That email doesn’t look right.'; return; }
-    if (phone && (phone.replace(/\D/g, '').length < 7 || !/^[+()\d\s.-]{7,30}$/.test(phone))) { msg.className = 'msg bad'; msg.textContent = 'That phone number doesn’t look right.'; return; }
-    var body = { id: id, platforms: group('want'), contact: { email: email, phone: phone }, payPlatforms: group('pay'), price: radio('price'), payModel: radio('model'), struggle: document.getElementById('struggle').value.trim() };
+    var body = { id: id, platforms: group('want'), contact: { email: email }, payPlatforms: group('pay'), price: radio('price'), payModel: radio('model'), struggle: document.getElementById('struggle').value.trim() };
     btn.disabled = true; btn.textContent = 'Sending...';
     fetch(RSVP_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       .then(function (r) { if (!r.ok) throw new Error('bad'); return r.json(); })
