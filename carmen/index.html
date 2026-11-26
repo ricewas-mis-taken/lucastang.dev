@@ -227,6 +227,8 @@ textarea { resize: vertical; min-height: 5.2rem; }
 .done h3 { font-size: 1.9rem; font-weight: 800; }
 .done p { color: var(--ink2); margin-top: .7rem; }
 .bars { margin-top: 1.6rem; }
+.spamnote { margin-top: 1.2rem; padding: 1rem 1.1rem; border-left: 4px solid #b4600d; background: #fdf3e7; border-radius: 6px; font-size: .98rem; }
+.spamnote b { display: block; margin-bottom: .2rem; }
 .bars h5 { font-size: .95rem; color: var(--ink2); margin-bottom: .7rem; }
 .bar { display: grid; grid-template-columns: 5.5rem 1fr 2.4rem; align-items: center; gap: .8rem; margin-bottom: .5rem; font-size: .95rem; font-weight: 600; }
 .bar .track { height: 9px; border-radius: 5px; background: #e4e7ef; overflow: hidden; }
@@ -689,6 +691,7 @@ Your browser can&rsquo;t play this video.
 <div class="done" id="done">
 <h3>You&rsquo;re in.</h3>
 <p>Thanks for the RSVP. Your first year of Carmen is free if it becomes paid. If you left an email, a thank-you is on its way, and I&rsquo;ll keep you posted as new things get done.</p>
+<div class="spamnote" id="spamNote"><b>Check your spam folder.</b> If the thank-you email landed there, mark it <i>Not spam</i> so future updates reach your inbox.</div>
 <div class="bars" id="bars"><h5>What people want first</h5></div>
 </div>
 </form>
@@ -869,7 +872,7 @@ Your browser can&rsquo;t play this video.
       requestAnimationFrame(function () { requestAnimationFrame(function () { row.querySelector('i').style.width = (n / max * 100) + '%'; }); });
     });
   }
-  function showDone(d) { document.getElementById('formBody').style.display = 'none'; document.getElementById('done').classList.add('on'); showBars(d); showCount(d); }
+  function showDone(d, emailed) { document.getElementById('spamNote').style.display = emailed ? 'block' : 'none'; document.getElementById('formBody').style.display = 'none'; document.getElementById('done').classList.add('on'); showBars(d); showCount(d); }
   fetch(RSVP_URL).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) { showCount(d); if (d && store.get('carmenRsvped') === '1') showDone(d); }).catch(function () {});
 
   form.addEventListener('submit', function (e) {
@@ -881,7 +884,7 @@ Your browser can&rsquo;t play this video.
     btn.disabled = true; btn.textContent = 'Sending...';
     fetch(RSVP_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       .then(function (r) { if (!r.ok) throw new Error('bad'); return r.json(); })
-      .then(function (d) { store.set('carmenRsvped', '1'); showDone(d); var top = document.getElementById('rsvp'); if (top.scrollIntoView) top.scrollIntoView({ block: 'start' }); })
+      .then(function (d) { store.set('carmenRsvped', '1'); showDone(d, !!email); var top = document.getElementById('rsvp'); if (top.scrollIntoView) top.scrollIntoView({ block: 'start' }); })
       .catch(function () { btn.disabled = false; btn.textContent = 'RSVP and claim my free year'; msg.className = 'msg bad'; msg.textContent = 'Couldn’t send that. Try again in a minute.'; });
   });
 })();
