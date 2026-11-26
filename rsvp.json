@@ -1,7 +1,7 @@
 {
-  "total": 3,
+  "total": 2,
   "platforms": {
-    "windows": 3,
+    "windows": 2,
     "mac": 2,
     "chrome": 2,
     "firefox": 2,
@@ -9,7 +9,6 @@
   },
   "ids": [
     "7c308f1e-dab9-4c53-affc-d787b9221cf5",
-    "93486233-bab4-4e83-9863-3c6140509ddc",
-    "deploytest-email-0003"
+    "93486233-bab4-4e83-9863-3c6140509ddc"
   ]
 }
