@@ -1,5 +1,5 @@
 {
-  "total": 3,
+  "total": 2,
   "platforms": {
     "windows": 2,
     "mac": 2,
@@ -9,7 +9,6 @@
   },
   "ids": [
     "7c308f1e-dab9-4c53-affc-d787b9221cf5",
-    "93486233-bab4-4e83-9863-3c6140509ddc",
-    "preview-email-0004"
+    "93486233-bab4-4e83-9863-3c6140509ddc"
   ]
 }
