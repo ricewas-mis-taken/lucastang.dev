@@ -57,3 +57,10 @@ compatibility_date = "2026-08-09"
 [[kv_namespaces]]
 binding = "RSVP_ENTRIES"
 id = "d5dfb72366834f2db48fe92a91393dff"
+
+# Thank-you email after an RSVP is sent through Resend (resend.com) once
+# RESEND_API_KEY is set; without it RSVPs still work and no email goes out.
+# lucastang.dev must be verified as a sending domain in Resend first.
+#   wrangler secret put RESEND_API_KEY
+# Optional sender override (default "Carmen Focus <carmen@lucastang.dev>"):
+#   [vars] EMAIL_FROM = "Carmen Focus <carmen@lucastang.dev>"
