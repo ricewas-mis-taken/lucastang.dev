@@ -505,7 +505,7 @@ async function handleRsvpExport(request, env, url) {
     cursor = list.cursor;
   }
   if (url.searchParams.get("format") === "csv") {
-    const cols = ["updatedAt", "email", "phone", "price", "payModel", "payPlatforms", "wantPlatforms", "struggle"];
+    const cols = ["updatedAt", "email", "unsubscribed", "emailedAt", "phone", "price", "payModel", "payPlatforms", "wantPlatforms", "struggle"];
     const esc = (v) => `"${String(Array.isArray(v) ? v.join("|") : v ?? "").replace(/"/g, '""')}"`;
     const csv = [cols.join(","), ...rows.map((r) => cols.map((c) => esc(r[c])).join(","))].join("\n");
     return new Response(csv, { headers: { "Content-Type": "text/csv; charset=utf-8" } });
@@ -513,7 +513,70 @@ async function handleRsvpExport(request, env, url) {
   return new Response(JSON.stringify(rows, null, 2), { headers: { "Content-Type": "application/json" } });
 }
 
-async function handleRsvpPost(request, env) {
+const SITE = "https://lucastang.dev";
+const API = "https://lucastang-dev-api.lucastang.workers.dev";
+
+function thankYouHtml(unsubscribeUrl) {
+  return `<!doctype html><html><body style="margin:0;padding:0;background:#f4f5f8;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f8;padding:32px 12px;font-family:Segoe UI,Helvetica,Arial,sans-serif;color:#0d1424;">
+<tr><td align="center">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #d8dce6;">
+<tr><td style="background:#0a0f22;padding:36px 36px 30px;">
+<img src="${SITE}/carmen/logo.png" width="56" height="56" alt="Carmen Focus" style="display:block;border-radius:14px;">
+<h1 style="margin:22px 0 6px;font-size:34px;line-height:1.1;color:#ffffff;letter-spacing:-0.5px;">You&rsquo;re on the list.</h1>
+<p style="margin:0;font-size:17px;line-height:1.5;color:#b6bfdc;">Thanks for RSVPing to Carmen Focus.</p>
+</td></tr>
+<tr><td style="padding:30px 36px 8px;">
+<a href="${SITE}/carmen/#film"><img src="${SITE}/carmen/poster.jpg" width="528" alt="Watch the Carmen Focus film" style="display:block;width:100%;max-width:528px;border-radius:10px;border:1px solid #d8dce6;"></a>
+</td></tr>
+<tr><td style="padding:20px 36px 0;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eaf6f1;border-left:4px solid #17855f;border-radius:6px;">
+<tr><td style="padding:16px 18px;font-size:16px;line-height:1.5;color:#0d1424;"><b>Your early supporter perk:</b> your first year of Carmen is free, if Carmen becomes paid.</td></tr>
+</table>
+</td></tr>
+<tr><td style="padding:24px 36px 8px;font-size:16px;line-height:1.6;color:#2b3350;">
+<p style="margin:0 0 14px;">Carmen blocks distracting apps and sites on every device you use, keeps rules for each task, and scores your days. It&rsquo;s still being built, and you&rsquo;re one of the people it&rsquo;s being built for.</p>
+<p style="margin:0 0 14px;">I&rsquo;ll keep emailing you as new things get done: new features, the platforms you asked for, and when it&rsquo;s ready for you to try. Not often, and only about Carmen.</p>
+<p style="margin:0;">Lucas</p>
+</td></tr>
+<tr><td style="padding:24px 36px 34px;">
+<a href="${SITE}/carmen/" style="display:inline-block;background:#2a44d4;color:#ffffff;text-decoration:none;font-weight:700;font-size:16px;padding:13px 24px;border-radius:8px;">See the Carmen page</a>
+</td></tr>
+<tr><td style="padding:18px 36px;background:#f8f9fb;border-top:1px solid #e4e7ef;font-size:13px;line-height:1.5;color:#6a7088;">
+You got this because you RSVPed at lucastang.dev/carmen. <a href="${unsubscribeUrl}" style="color:#6a7088;">Unsubscribe</a>
+</td></tr>
+</table>
+</td></tr></table></body></html>`;
+}
+
+async function sendThankYou(env, record) {
+  const unsubscribeUrl = `${API}/api/rsvp/unsubscribe?id=${encodeURIComponent(record.id)}`;
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: env.EMAIL_FROM || "Carmen Focus <carmen@lucastang.dev>",
+      to: [record.email],
+      subject: "You're on the list for Carmen Focus",
+      html: thankYouHtml(unsubscribeUrl),
+      text: "You're on the list for Carmen Focus. Your first year is free if Carmen becomes paid. I'll keep emailing you as new things get done. - Lucas\n\nUnsubscribe: " + unsubscribeUrl,
+      headers: { "List-Unsubscribe": `<${unsubscribeUrl}>` },
+    }),
+  });
+  if (!res.ok) throw new Error(`resend ${res.status}`);
+  await env.RSVP_ENTRIES.put(`e:${record.id}`, JSON.stringify({ ...record, emailedAt: new Date().toISOString() }));
+}
+
+async function handleRsvpUnsubscribe(env, url) {
+  const id = url.searchParams.get("id") || "";
+  if (env.RSVP_ENTRIES && /^[A-Za-z0-9-]{8,64}$/.test(id)) {
+    const rec = await env.RSVP_ENTRIES.get(`e:${id}`, "json");
+    if (rec) await env.RSVP_ENTRIES.put(`e:${id}`, JSON.stringify({ ...rec, unsubscribed: true }));
+  }
+  return new Response(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><body style="font-family:Segoe UI,Arial,sans-serif;padding:48px 20px;text-align:center;color:#0d1424"><h1>You&rsquo;re unsubscribed.</h1><p>You won&rsquo;t get more Carmen emails. Your RSVP still counts.</p><p><a href="${SITE}/carmen/">Back to Carmen</a></p></body>`, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+}
+
+async function handleRsvpPost(request, env, ctx) {
   let body;
   try {
     body = await request.json();
@@ -532,7 +595,14 @@ async function handleRsvpPost(request, env) {
   }
   if (env.RSVP_ENTRIES) {
     try {
-      await env.RSVP_ENTRIES.put(`e:${id}`, JSON.stringify({ id, ...entry.value, updatedAt: new Date().toISOString() }));
+      const previous = await env.RSVP_ENTRIES.get(`e:${id}`, "json");
+      const record = { id, ...entry.value, emailedAt: previous?.emailedAt || "", unsubscribed: !!previous?.unsubscribed, updatedAt: new Date().toISOString() };
+      await env.RSVP_ENTRIES.put(`e:${id}`, JSON.stringify(record));
+      // One thank-you email per person, sent after the response so the page never waits on it.
+      if (record.email && !record.emailedAt && env.RESEND_API_KEY) {
+        const send = sendThankYou(env, record).catch(() => {});
+        if (ctx?.waitUntil) ctx.waitUntil(send); else await send;
+      }
     } catch (e) {
       return new Response(JSON.stringify({ error: "rsvp_unavailable" }), { status: 503, headers: { "Content-Type": "application/json", ...corsHeaders() } });
     }
@@ -602,6 +672,10 @@ export default {
       return handleAnalyticsPost(request, env);
     }
 
+    if (url.pathname === "/api/rsvp/unsubscribe" && request.method === "GET") {
+      return handleRsvpUnsubscribe(env, url);
+    }
+
     if (url.pathname === "/api/rsvp/export" && request.method === "GET") {
       return handleRsvpExport(request, env, url);
     }
@@ -611,7 +685,7 @@ export default {
     }
 
     if (url.pathname === "/api/rsvp" && request.method === "POST") {
-      return handleRsvpPost(request, env);
+      return handleRsvpPost(request, env, ctx);
     }
 
     return new Response("Not found", { status: 404, headers: corsHeaders() });
