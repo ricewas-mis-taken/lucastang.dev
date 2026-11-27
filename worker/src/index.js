@@ -593,11 +593,18 @@ async function handleRsvpPost(request, env, ctx) {
   if (entry.error) {
     return new Response(JSON.stringify({ error: entry.error }), { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders() } });
   }
+  let referral = null;
   if (env.RSVP_ENTRIES) {
     try {
       const previous = await env.RSVP_ENTRIES.get(`e:${id}`, "json");
-      const record = { id, ...entry.value, emailedAt: previous?.emailedAt || "", unsubscribed: !!previous?.unsubscribed, updatedAt: new Date().toISOString() };
+      const code = previous?.code || (await newReferralCode(env));
+      const ref = typeof body?.ref === "string" && /^[a-z0-9]{6}$/.test(body.ref) ? body.ref : "";
+      const record = { id, ...entry.value, code, referredBy: previous ? previous.referredBy || "" : ref, referrals: previous?.referrals || [], emailedAt: previous?.emailedAt || "", unsubscribed: !!previous?.unsubscribed, updatedAt: new Date().toISOString() };
       await env.RSVP_ENTRIES.put(`e:${id}`, JSON.stringify(record));
+      if (!previous?.code) await env.RSVP_ENTRIES.put(`c:${code}`, id);
+      // Credit the referrer once, only for a brand-new RSVP and never for referring yourself.
+      if (!previous && ref && ref !== code) await creditReferral(env, ref, id);
+      referral = { code, referrals: record.referrals.length };
       // One thank-you email per person, sent after the response so the page never waits on it.
       if (record.email && !record.emailedAt && env.RESEND_API_KEY) {
         const send = sendThankYou(env, record).catch(() => {});
@@ -641,7 +648,42 @@ async function handleRsvpPost(request, env, ctx) {
   } catch (e) {
     return new Response(JSON.stringify({ error: "rsvp_unavailable" }), { status: 503, headers: { "Content-Type": "application/json", ...corsHeaders() } });
   }
-  return new Response(JSON.stringify(publicRsvp(stats)), { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders() } });
+  return new Response(JSON.stringify({ ...publicRsvp(stats), ...(referral || {}) }), { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders() } });
+}
+
+// Referral codes: each RSVP gets a short public code (c:<code> -> private id).
+// The private id stays secret because it also unlocks the unsubscribe link.
+const REFERRAL_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
+const REFERRAL_MAX = 1000;
+
+async function newReferralCode(env) {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const bytes = crypto.getRandomValues(new Uint8Array(6));
+    const code = Array.from(bytes, (b) => REFERRAL_ALPHABET[b % REFERRAL_ALPHABET.length]).join("");
+    if (!(await env.RSVP_ENTRIES.get(`c:${code}`))) return code;
+  }
+  throw new Error("no free referral code");
+}
+
+async function creditReferral(env, code, newId) {
+  const ownerId = await env.RSVP_ENTRIES.get(`c:${code}`);
+  if (!ownerId || ownerId === newId) return;
+  const owner = await env.RSVP_ENTRIES.get(`e:${ownerId}`, "json");
+  if (!owner) return;
+  const referrals = Array.isArray(owner.referrals) ? owner.referrals : [];
+  if (referrals.includes(newId) || referrals.length >= REFERRAL_MAX) return;
+  await env.RSVP_ENTRIES.put(`e:${ownerId}`, JSON.stringify({ ...owner, referrals: [...referrals, newId] }));
+}
+
+async function handleReferralGet(env, url) {
+  const code = url.searchParams.get("code") || "";
+  let count = 0;
+  if (env.RSVP_ENTRIES && /^[a-z0-9]{6}$/.test(code)) {
+    const ownerId = await env.RSVP_ENTRIES.get(`c:${code}`);
+    const owner = ownerId ? await env.RSVP_ENTRIES.get(`e:${ownerId}`, "json") : null;
+    count = Array.isArray(owner?.referrals) ? owner.referrals.length : 0;
+  }
+  return new Response(JSON.stringify({ code, referrals: count }), { headers: { "Content-Type": "application/json", "Cache-Control": "no-store", ...corsHeaders() } });
 }
 
 export default {
@@ -678,6 +720,10 @@ export default {
 
     if (url.pathname === "/api/rsvp/export" && request.method === "GET") {
       return handleRsvpExport(request, env, url);
+    }
+
+    if (url.pathname === "/api/rsvp/referrals" && request.method === "GET") {
+      return handleReferralGet(env, url);
     }
 
     if (url.pathname === "/api/rsvp" && request.method === "GET") {

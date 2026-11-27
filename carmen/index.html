@@ -229,6 +229,17 @@ textarea { resize: vertical; min-height: 5.2rem; }
 .bars { margin-top: 1.6rem; }
 .spamnote { margin-top: 1.2rem; padding: 1rem 1.1rem; border-left: 4px solid #b4600d; background: #fdf3e7; border-radius: 6px; font-size: .98rem; }
 .spamnote b { display: block; margin-bottom: .2rem; }
+.refer { margin-top: 1.4rem; padding: 1.2rem; border: 1px solid var(--line); border-radius: 10px; }
+.refer h4 { font-size: 1.15rem; font-weight: 800; }
+.refer > p { color: var(--ink2); margin-top: .3rem; font-size: .98rem; }
+.reflink { display: flex; gap: .5rem; margin-top: .8rem; }
+.reflink input { flex: 1; min-width: 0; font: inherit; font-size: .95rem; padding: .6rem .7rem; border: 1px solid var(--line); border-radius: 6px; background: #f6f7fb; }
+.tiers { list-style: none; margin-top: 1rem; display: grid; gap: .45rem; }
+.tiers li { display: flex; gap: .6rem; align-items: baseline; font-size: .98rem; color: var(--ink2); }
+.tiers li b { min-width: 5.5rem; color: inherit; }
+.tiers li.got { color: #0f7a4f; font-weight: 600; }
+.tiers li.got::after { content: "unlocked"; font-size: .8rem; margin-left: auto; }
+.refcount { margin-top: .8rem; font-weight: 700; }
 .bars h5 { font-size: .95rem; color: var(--ink2); margin-bottom: .7rem; }
 .bar { display: grid; grid-template-columns: 5.5rem 1fr 2.4rem; align-items: center; gap: .8rem; margin-bottom: .5rem; font-size: .95rem; font-weight: 600; }
 .bar .track { height: 9px; border-radius: 5px; background: #e4e7ef; overflow: hidden; }
@@ -620,6 +631,7 @@ Your browser can&rsquo;t play this video.
 <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6ee7b7" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span><b>1 year of Carmen free</b>, if Carmen becomes paid</span></li>
 <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6ee7b7" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span><b>Early access</b> when it&rsquo;s ready on your platform</span></li>
 <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6ee7b7" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span><b>A say in pricing</b> and in what ships next</span></li>
+<li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6ee7b7" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span><b>More for bringing friends</b>: beta access first, then 2 years free, then free for life</span></li>
 </ul>
 <div class="cnt" id="perkCount"></div>
 </aside>
@@ -692,6 +704,17 @@ Your browser can&rsquo;t play this video.
 <h3>You&rsquo;re in.</h3>
 <p>Thanks for the RSVP. Your first year of Carmen is free if it becomes paid. If you left an email, a thank-you is on its way, and I&rsquo;ll keep you posted as new things get done.</p>
 <div class="spamnote" id="spamNote"><b>Check your spam folder.</b> If the thank-you email landed there, mark it <i>Not spam</i> so future updates reach your inbox.</div>
+<div class="refer" id="refer" hidden>
+<h4>Bring friends, get more Carmen</h4>
+<p>Share your link. Each friend who RSVPs through it counts.</p>
+<div class="reflink"><input id="refLink" readonly aria-label="Your referral link"/><button class="btn sm" id="refCopy" type="button">Copy</button></div>
+<ul class="tiers" id="tiers">
+<li data-n="1"><b>1 friend</b><span>Beta access before everyone else</span></li>
+<li data-n="3"><b>3 friends</b><span>2 years of Carmen free</span></li>
+<li data-n="10"><b>10 friends</b><span>Carmen free for life</span></li>
+</ul>
+<p class="refcount" id="refCount"></p>
+</div>
 <div class="bars" id="bars"><h5>What people want first</h5></div>
 </div>
 </form>
@@ -850,6 +873,22 @@ Your browser can&rsquo;t play this video.
   var store = { get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
   var id = store.get('carmenRsvpId');
   if (!id) { id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2, 12)); store.set('carmenRsvpId', id); }
+  var refIn = (new URLSearchParams(location.search).get('ref') || '').toLowerCase();
+  if (/^[a-z0-9]{6}$/.test(refIn) && !store.get('carmenRef')) store.set('carmenRef', refIn);
+  function showRefer(code, n) {
+    if (!/^[a-z0-9]{6}$/.test(code || '')) return;
+    document.getElementById('refer').hidden = false;
+    document.getElementById('refLink').value = 'https://lucastang.dev/carmen/?ref=' + code;
+    n = Math.max(0, n | 0);
+    document.getElementById('refCount').textContent = n === 1 ? '1 friend has RSVP’d with your link.' : n + ' friends have RSVP’d with your link.';
+    document.querySelectorAll('#tiers li').forEach(function (li) { li.classList.toggle('got', n >= +li.getAttribute('data-n')); });
+  }
+  document.getElementById('refCopy').addEventListener('click', function () {
+    var inp = document.getElementById('refLink'), b = this;
+    var ok = function () { b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy'; }, 1600); };
+    if (navigator.clipboard) navigator.clipboard.writeText(inp.value).then(ok, function () { inp.select(); });
+    else { inp.select(); try { document.execCommand('copy'); ok(); } catch (e) {} }
+  });
   var group = function (name) { return Array.prototype.map.call(document.querySelectorAll('[data-group="' + name + '"] input:checked'), function (i) { return i.value; }); };
   var radio = function (name) { var c = document.querySelector('input[name="' + name + '"]:checked'); return c ? c.value : ''; };
 
@@ -873,18 +912,24 @@ Your browser can&rsquo;t play this video.
     });
   }
   function showDone(d, emailed) { document.getElementById('spamNote').style.display = emailed ? 'block' : 'none'; document.getElementById('formBody').style.display = 'none'; document.getElementById('done').classList.add('on'); showBars(d); showCount(d); }
-  fetch(RSVP_URL).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) { showCount(d); if (d && store.get('carmenRsvped') === '1') showDone(d); }).catch(function () {});
+  fetch(RSVP_URL).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) { showCount(d); if (d && store.get('carmenRsvped') === '1') { showDone(d); loadReferrals(); } }).catch(function () {});
+  function loadReferrals() {
+    var code = store.get('carmenRefCode');
+    if (!code) return;
+    showRefer(code, 0);
+    fetch(RSVP_URL + '/referrals?code=' + encodeURIComponent(code)).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) { if (d) showRefer(code, d.referrals); }).catch(function () {});
+  }
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     var email = document.getElementById('email').value.trim();
     msg.className = 'msg'; msg.textContent = '';
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { msg.className = 'msg bad'; msg.textContent = 'That email doesn’t look right.'; return; }
-    var body = { id: id, platforms: group('want'), contact: { email: email }, payPlatforms: group('pay'), price: radio('price'), payModel: radio('model'), struggle: document.getElementById('struggle').value.trim() };
+    var body = { id: id, platforms: group('want'), contact: { email: email }, payPlatforms: group('pay'), price: radio('price'), payModel: radio('model'), struggle: document.getElementById('struggle').value.trim(), ref: store.get('carmenRef') || '' };
     btn.disabled = true; btn.textContent = 'Sending...';
     fetch(RSVP_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       .then(function (r) { if (!r.ok) throw new Error('bad'); return r.json(); })
-      .then(function (d) { store.set('carmenRsvped', '1'); showDone(d, !!email); var top = document.getElementById('rsvp'); if (top.scrollIntoView) top.scrollIntoView({ block: 'start' }); })
+      .then(function (d) { store.set('carmenRsvped', '1'); if (d.code) store.set('carmenRefCode', d.code); showDone(d, !!email); showRefer(d.code, d.referrals); var top = document.getElementById('rsvp'); if (top.scrollIntoView) top.scrollIntoView({ block: 'start' }); })
       .catch(function () { btn.disabled = false; btn.textContent = 'RSVP and claim my free year'; msg.className = 'msg bad'; msg.textContent = 'Couldn’t send that. Try again in a minute.'; });
   });
 })();
