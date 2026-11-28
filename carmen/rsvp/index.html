@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>RSVP · Carmen Focus</title>
+<meta name="description" content="RSVP for Carmen Focus in 10 seconds. Founding members get their first year free."/>
+<meta property="og:title" content="RSVP for Carmen Focus"/>
+<meta property="og:description" content="The focus app you can't cheat. Founding members get their first year free."/>
+<link href="/favicon.ico" rel="icon"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<style>
+:root { --bg: #07081a; --card: #11132b; --line: #262a52; --ink: #ffffff; --ink2: #aab2d6; --blue: #4a6cf5; --violet: #6d4cf0; --green: #27c281; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { min-height: 100%; }
+body { font-family: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink); background: radial-gradient(ellipse at 30% -10%, #3b2a9a 0%, #12123a 45%, var(--bg) 75%) fixed, var(--bg); -webkit-font-smoothing: antialiased; }
+main { max-width: 520px; margin: 0 auto; padding: 28px 16px 48px; }
+.top { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.05rem; color: var(--ink2); text-decoration: none; }
+.top img { width: 34px; height: 34px; border-radius: 9px; }
+h1 { font-size: clamp(2.3rem, 9vw, 3.1rem); line-height: 1.02; letter-spacing: -.035em; font-weight: 900; margin: 26px 0 12px; }
+.sub { color: var(--ink2); font-size: 1.12rem; line-height: 1.45; }
+.closing { margin-top: 18px; display: flex; gap: 10px; align-items: flex-start; background: rgba(255, 180, 80, .1); border: 1px solid rgba(255, 180, 80, .35); color: #ffd9a3; border-radius: 12px; padding: 12px 14px; font-weight: 600; font-size: .98rem; line-height: 1.4; }
+.closing .dot { width: 10px; height: 10px; border-radius: 50%; background: #ffb050; flex: none; margin-top: 6px; box-shadow: 0 0 0 0 rgba(255, 176, 80, .7); animation: pulse 1.6s infinite; }
+@keyframes pulse { 70% { box-shadow: 0 0 0 10px rgba(255, 176, 80, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 176, 80, 0); } }
+form { margin-top: 22px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 20px; }
+label.f { display: block; font-weight: 700; font-size: .95rem; margin-bottom: 8px; }
+input[type=email] { width: 100%; font: inherit; font-size: 1.1rem; color: #fff; background: #0b0d22; border: 1.5px solid var(--line); border-radius: 12px; padding: 14px 14px; outline: none; }
+input[type=email]:focus { border-color: var(--blue); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.chips p { width: 100%; font-weight: 700; font-size: .95rem; margin-bottom: 2px; }
+.chip input { position: absolute; opacity: 0; pointer-events: none; }
+.chip span { display: inline-block; padding: 9px 14px; border-radius: 999px; border: 1.5px solid var(--line); color: var(--ink2); font-weight: 600; cursor: pointer; user-select: none; }
+.chip input:checked + span { background: var(--blue); border-color: var(--blue); color: #fff; }
+.chip input:focus-visible + span { outline: 2px solid #fff; outline-offset: 2px; }
+button.go { width: 100%; margin-top: 18px; font: inherit; font-weight: 800; font-size: 1.2rem; color: #fff; border: 0; border-radius: 14px; padding: 17px; cursor: pointer; background: linear-gradient(90deg, var(--violet), var(--blue)); box-shadow: 0 14px 40px rgba(91, 110, 239, .45); }
+button.go[disabled] { opacity: .65; cursor: default; }
+.msg { min-height: 1.4em; margin-top: 10px; font-weight: 600; color: #ff8f86; font-size: .95rem; }
+.fine { margin-top: 12px; font-size: .82rem; color: #7d86ad; line-height: 1.45; }
+.count { margin-top: 16px; color: var(--ink2); font-weight: 600; text-align: center; min-height: 1.4em; }
+.more { display: block; text-align: center; margin-top: 18px; color: var(--ink2); font-weight: 600; }
+
+/* the reveal */
+#done { display: none; text-align: center; }
+#done.on { display: block; animation: pop .5s cubic-bezier(.34, 1.4, .64, 1) both; }
+@keyframes pop { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: none; } }
+.badge { margin: 30px auto 0; width: 112px; height: 112px; border-radius: 28px; box-shadow: 0 0 80px rgba(91, 141, 239, .7); }
+.kicker { margin-top: 22px; color: var(--green); font-weight: 800; letter-spacing: .02em; font-size: 1.05rem; }
+.member { font-size: clamp(2.2rem, 9vw, 3rem); font-weight: 900; letter-spacing: -.035em; line-height: 1.05; margin-top: 6px; }
+.prize { margin-top: 22px; border-radius: 20px; padding: 24px 18px; background: linear-gradient(135deg, #2a1d7a, #1b3fb8); box-shadow: 0 20px 60px rgba(60, 80, 230, .45), inset 0 0 0 1px rgba(255, 255, 255, .15); }
+.prize small { display: block; color: #c7d2ff; font-weight: 700; font-size: .95rem; }
+.prize b { display: block; font-size: clamp(2rem, 8vw, 2.6rem); line-height: 1.08; letter-spacing: -.03em; margin-top: 6px; }
+.prize span { display: block; color: #c7d2ff; margin-top: 8px; font-size: .95rem; }
+.level { margin-top: 24px; text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 20px; }
+.level h2 { font-size: 1.35rem; letter-spacing: -.02em; }
+.level > p { color: var(--ink2); margin-top: 4px; }
+.tiers { list-style: none; margin-top: 14px; display: grid; gap: 10px; }
+.tiers li { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 12px; background: #0b0d22; border: 1px solid var(--line); }
+.tiers li b { min-width: 74px; font-size: .95rem; color: var(--ink2); }
+.tiers li span { font-weight: 700; }
+.tiers li.got { border-color: var(--green); background: rgba(39, 194, 129, .12); }
+.tiers li.got b { color: var(--green); }
+.share { display: flex; gap: 8px; margin-top: 16px; }
+.share input { flex: 1; min-width: 0; font: inherit; font-size: .92rem; color: #fff; background: #0b0d22; border: 1.5px solid var(--line); border-radius: 10px; padding: 11px; }
+.share button { font: inherit; font-weight: 800; border: 0; border-radius: 10px; padding: 0 16px; cursor: pointer; color: #fff; background: var(--blue); }
+.sharebig { width: 100%; margin-top: 10px; font: inherit; font-weight: 800; font-size: 1.05rem; border: 0; border-radius: 12px; padding: 14px; cursor: pointer; color: #07081a; background: #fff; }
+.refn { margin-top: 12px; font-weight: 700; color: var(--ink2); text-align: center; }
+.spam { margin-top: 18px; font-size: .9rem; color: #ffd9a3; }
+canvas#confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+@media (prefers-reduced-motion: reduce) { .closing .dot { animation: none; } #done.on { animation: none; } }
+</style>
+</head>
+<body>
+<canvas id="confetti"></canvas>
+<main>
+  <a class="top" href="/carmen/"><img src="/carmen/logo.png" alt=""/>Carmen Focus</a>
+
+  <div id="formWrap">
+    <h1>Lock in your spot.</h1>
+    <p class="sub">The focus app you can't cheat. RSVP takes 10 seconds, and founding members get their <b style="color:#fff">first year free</b>.</p>
+    <div class="closing"><span class="dot"></span><span>Founding-member perks close the day Carmen launches. After that, it's full price.</span></div>
+
+    <form id="form" novalidate>
+      <label class="f" for="email">Your email</label>
+      <input type="email" id="email" autocomplete="email" inputmode="email" placeholder="you@example.com" required/>
+      <div class="chips">
+        <p>Where do you want it? <span style="font-weight:500;color:#7d86ad">(optional)</span></p>
+        <label class="chip"><input type="checkbox" value="windows"/><span>Windows</span></label>
+        <label class="chip"><input type="checkbox" value="mac"/><span>Mac</span></label>
+        <label class="chip"><input type="checkbox" value="chrome"/><span>Chrome</span></label>
+        <label class="chip"><input type="checkbox" value="firefox"/><span>Firefox</span></label>
+        <label class="chip"><input type="checkbox" value="iphone"/><span>iPhone</span></label>
+      </div>
+      <button class="go" id="go" type="submit">Claim my free year</button>
+      <div class="msg" id="msg" role="status"></div>
+      <p class="fine">Your email is only used for Carmen updates and to send your perks. Every email has an unsubscribe link. The free year applies if Carmen becomes paid.</p>
+    </form>
+    <p class="count" id="count"></p>
+    <a class="more" href="/carmen/">See everything Carmen does</a>
+  </div>
+
+  <div id="done">
+    <img class="badge" src="/carmen/logo.png" alt=""/>
+    <p class="kicker">YOU'RE IN</p>
+    <p class="member" id="member">Founding member</p>
+    <div class="prize">
+      <small>Your prize</small>
+      <b>1 year of Carmen, free</b>
+      <span>Locked to your email. It's yours if Carmen becomes paid.</span>
+    </div>
+    <div class="level">
+      <h2>Want it for life?</h2>
+      <p>Share your link. Every friend who RSVPs through it counts.</p>
+      <ul class="tiers" id="tiers">
+        <li data-n="1"><b>1 friend</b><span>Beta access before everyone</span></li>
+        <li data-n="3"><b>3 friends</b><span>2 years free</span></li>
+        <li data-n="10"><b>10 friends</b><span>Carmen free for life</span></li>
+      </ul>
+      <div class="share"><input id="refLink" readonly aria-label="Your referral link"/><button id="copy" type="button">Copy</button></div>
+      <button class="sharebig" id="shareBtn" type="button">Share with a friend</button>
+      <p class="refn" id="refN"></p>
+    </div>
+    <p class="spam" id="spam">Check your inbox (and spam) for the confirmation.</p>
+    <a class="more" href="/carmen/">See everything Carmen does</a>
+  </div>
+</main>
+<script>
+(function () {
+  var API = 'https://lucastang-dev-api.lucastang.workers.dev/api/rsvp';
+  var store = { get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+  var id = store.get('carmenRsvpId');
+  if (!id) { id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2, 12)); store.set('carmenRsvpId', id); }
+  var refIn = (new URLSearchParams(location.search).get('ref') || '').toLowerCase();
+  if (/^[a-z0-9]{6}$/.test(refIn) && !store.get('carmenRef')) store.set('carmenRef', refIn);
+
+  function setCount(d) {
+    // only real numbers, and only once they mean something
+    if (d && typeof d.total === 'number' && d.total >= 25) document.getElementById('count').textContent = d.total.toLocaleString() + ' people have already RSVP’d.';
+  }
+  function showRefer(code, n) {
+    if (!/^[a-z0-9]{6}$/.test(code || '')) { document.querySelector('.level').style.display = 'none'; return; }
+    var link = 'https://lucastang.dev/carmen/rsvp/?ref=' + code;
+    document.getElementById('refLink').value = link;
+    n = Math.max(0, n | 0);
+    document.getElementById('refN').textContent = n === 1 ? '1 friend has joined with your link.' : n + ' friends have joined with your link.';
+    document.querySelectorAll('#tiers li').forEach(function (li) { li.classList.toggle('got', n >= +li.getAttribute('data-n')); });
+  }
+  function reveal(d, emailed, celebrate) {
+    document.getElementById('formWrap').style.display = 'none';
+    document.getElementById('done').classList.add('on');
+    document.getElementById('spam').style.display = emailed ? 'block' : 'none';
+    if (d && typeof d.total === 'number' && d.total > 0) document.getElementById('member').textContent = 'Founding member #' + d.total.toLocaleString();
+    window.scrollTo(0, 0);
+    if (celebrate) confetti();
+  }
+
+  fetch(API).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+    setCount(d);
+    if (store.get('carmenRsvped') === '1') {
+      reveal(null, false, false);
+      var code = store.get('carmenRefCode');
+      showRefer(code, 0);
+      if (code) fetch(API + '/referrals?code=' + code).then(function (r) { return r.ok ? r.json() : null; }).then(function (x) { if (x) showRefer(code, x.referrals); }).catch(function () {});
+    }
+  }).catch(function () {});
+
+  var form = document.getElementById('form'), go = document.getElementById('go'), msg = document.getElementById('msg');
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var email = document.getElementById('email').value.trim();
+    msg.textContent = '';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { msg.textContent = 'Add your email so we can send your free year.'; return; }
+    var plats = Array.prototype.map.call(document.querySelectorAll('.chip input:checked'), function (i) { return i.value; });
+    go.disabled = true; go.textContent = 'Claiming…';
+    fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id, platforms: plats, contact: { email: email }, payPlatforms: [], price: '', payModel: '', struggle: '', ref: store.get('carmenRef') || '' }) })
+      .then(function (r) { if (!r.ok) throw new Error('bad'); return r.json(); })
+      .then(function (d) { store.set('carmenRsvped', '1'); if (d.code) store.set('carmenRefCode', d.code); reveal(d, true, true); showRefer(d.code, d.referrals); })
+      .catch(function () { go.disabled = false; go.textContent = 'Claim my free year'; msg.textContent = 'Couldn’t send that. Try again in a minute.'; });
+  });
+
+  document.getElementById('copy').addEventListener('click', function () {
+    var inp = document.getElementById('refLink'), b = this;
+    var ok = function () { b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy'; }, 1600); };
+    if (navigator.clipboard) navigator.clipboard.writeText(inp.value).then(ok, function () { inp.select(); }); else { inp.select(); try { document.execCommand('copy'); ok(); } catch (e) {} }
+  });
+  document.getElementById('shareBtn').addEventListener('click', function () {
+    var url = document.getElementById('refLink').value;
+    if (navigator.share) navigator.share({ title: 'Carmen Focus', text: 'The focus app you can’t cheat. RSVP and get your first year free:', url: url }).catch(function () {});
+    else document.getElementById('copy').click();
+  });
+
+  function confetti() {
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var c = document.getElementById('confetti'), x = c.getContext('2d'), dpr = window.devicePixelRatio || 1;
+    c.width = innerWidth * dpr; c.height = innerHeight * dpr; x.scale(dpr, dpr);
+    var cols = ['#6d4cf0', '#4a6cf5', '#27c281', '#ffb050', '#ffffff', '#ff6b8b'], P = [];
+    for (var i = 0; i < 160; i++) P.push({ x: innerWidth / 2, y: innerHeight * .35, vx: (Math.random() - .5) * 14, vy: -Math.random() * 14 - 4, r: Math.random() * 6 + 4, c: cols[i % cols.length], a: Math.random() * 6, s: (Math.random() - .5) * .3 });
+    var t0 = performance.now();
+    (function f(t) {
+      x.clearRect(0, 0, innerWidth, innerHeight);
+      P.forEach(function (p) { p.vy += .35; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.a += p.s; x.save(); x.translate(p.x, p.y); x.rotate(p.a); x.fillStyle = p.c; x.fillRect(-p.r / 2, -p.r / 4, p.r, p.r / 2); x.restore(); });
+      if (t - t0 < 3500) requestAnimationFrame(f); else x.clearRect(0, 0, innerWidth, innerHeight);
+    })(t0);
+  }
+})();
+</script>
+</body>
+</html>
