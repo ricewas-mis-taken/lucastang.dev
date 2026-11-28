@@ -1,15 +1,16 @@
 {
-  "total": 3,
+  "total": 4,
   "platforms": {
-    "windows": 3,
-    "mac": 3,
-    "chrome": 3,
+    "windows": 4,
+    "mac": 4,
+    "chrome": 4,
     "firefox": 3,
     "iphone": 3
   },
   "ids": [
     "7c308f1e-dab9-4c53-affc-d787b9221cf5",
     "93486233-bab4-4e83-9863-3c6140509ddc",
-    "b19a8526-ebc7-4aeb-ae5c-a76fa88296e8"
+    "b19a8526-ebc7-4aeb-ae5c-a76fa88296e8",
+    "247bf1af-7abe-449d-acd4-e98ccdce39cf"
   ]
 }
